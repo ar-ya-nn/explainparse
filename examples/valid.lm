@@ -1,0 +1,24 @@
+// A valid Lumen program
+fn fib(n: int) -> int {
+    if (n < 2) {
+        return n;
+    }
+    return fib(n - 1) + fib(n - 2);
+}
+
+fn main() -> int {
+    let total: int = 0;
+    let i: int = 0;
+    while (i < 10) {
+        total = total + fib(i);
+        i = i + 1;
+    }
+    if (total > 50 && !false) {
+        print("big");
+    } else if (total == 0) {
+        print("zero");
+    } else {
+        print("small");
+    }
+    return total;
+}

@@ -1,0 +1,27 @@
+fn steps(n: int) -> int {
+    let count: int = 0;
+    while (n != 1) {
+        if (n % 2 == 0) {
+            n = n / 2;
+        } else {
+            n = 3 * n + 1;
+        }
+        count = count + 1;
+    }
+    return count;
+}
+
+fn longest(limit: int) -> int {
+    let best: int = 0;
+    let best_n: int = 1;
+    let i: int = 1;
+    while (i < limit) {
+        let s: int = steps(i);
+        if (s > best) {
+            best = s;
+            best_n = i;
+        }
+        i = i + 1;
+    }
+    return best_n;
+}

@@ -1,0 +1,17 @@
+fn power(base: int, exp: int) -> int {
+    let result: int = 1;
+    while (exp > 0) {
+        if (exp % 2 == 1) {
+            result = result * base;
+        }
+        base = base * base;
+        exp = exp / 2;
+    }
+    return result;
+}
+
+fn main() -> int {
+    let p: int = power(3, 5);
+    let q: int = -(p - 200) * 2;
+    return p + q;
+}

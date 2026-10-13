@@ -1,0 +1,23 @@
+fn valid_pin(pin: int) -> bool {
+    return pin >= 1000 && pin <= 9999;
+}
+
+fn attempt(pin: int, correct: int, tries: int) -> bool {
+    if (tries >= 3) {
+        print("locked");
+        return false;
+    }
+    if (!valid_pin(pin) || pin != correct) {
+        print("wrong pin");
+        return false;
+    }
+    return true;
+}
+
+fn main() -> int {
+    let ok: bool = attempt(1234, 1234, 0);
+    if (ok == true) {
+        print("welcome");
+    }
+    return 0;
+}

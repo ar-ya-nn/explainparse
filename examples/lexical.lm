@@ -1,0 +1,7 @@
+fn main() -> int {
+    let name: str = "Aryan;
+    let ok: bool = true & false;
+    let 2fast: int = 3;
+    let s: str = 'hi';
+    return 0 @;
+}

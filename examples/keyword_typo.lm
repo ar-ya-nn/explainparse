@@ -1,0 +1,7 @@
+fn main() -> int {
+    let i: int = 0;
+    whlie (i < 3) {
+        i = i + 1;
+    }
+    retrun i;
+}

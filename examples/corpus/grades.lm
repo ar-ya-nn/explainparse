@@ -1,0 +1,24 @@
+fn grade(score: int) -> str {
+    if (score >= 90) {
+        return "A";
+    } else if (score >= 75) {
+        return "B";
+    } else if (score >= 60) {
+        return "C";
+    } else {
+        return "F";
+    }
+}
+
+fn passed(score: int, attendance: int) -> bool {
+    return score >= 60 && attendance >= 75;
+}
+
+fn main() -> int {
+    let s: int = 82;
+    print(grade(s));
+    if (!passed(s, 70)) {
+        print("debarred");
+    }
+    return 0;
+}

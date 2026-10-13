@@ -1,0 +1,6 @@
+fn check(x: int) -> bool {
+    if (x > 5 {
+        return true;
+    }
+    return false;
+}

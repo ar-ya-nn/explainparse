@@ -1,0 +1,5 @@
+fn main() -> int {
+    let total: int = 10
+    let rate: int = 2;
+    return total * rate;
+}

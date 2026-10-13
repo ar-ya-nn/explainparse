@@ -1,0 +1,19 @@
+fn apply_interest(balance: int, rate: int) -> int {
+    let interest: int = balance * rate / 100;
+    return balance + interest;
+}
+
+fn main() -> int {
+    let balance: int = 1000;
+    let years: int = 0;
+    while (years < 5) {
+        balance = apply_interest(balance, 7);
+        years = years + 1;
+    }
+    if (balance > 1400) {
+        print("goal reached");
+    } else {
+        print("keep saving");
+    }
+    return balance;
+}

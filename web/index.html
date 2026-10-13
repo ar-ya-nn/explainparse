@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ExplainParse playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e9edf1; --surface: #ffffff; --ink: #1b2430; --muted: #5d6b7a; --rule: #d3dae2;
+  --pencil: #c8323c; --pencil-wash: rgba(200, 50, 60, .08); --fix: #127c7a; --amber: #a86a12;
+  --focus: #2f6fd6;
+  --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141a21; --surface: #1c242d; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2c3743;
+    --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --amber: #e0a64b;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141a21; --surface: #1c242d; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2c3743;
+  --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --amber: #e0a64b;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); display: flex; flex-direction: column; }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+header { display: flex; align-items: baseline; gap: 1.25rem; padding: .9rem 1.5rem; flex-wrap: wrap; }
+.brand { font-weight: 600; font-size: 1.15rem; letter-spacing: -.01em; }
+.brand small { font-weight: 400; color: var(--muted); font-size: .9rem; margin-left: .5rem; }
+.spacer { flex: 1; }
+.tally { font-size: .95rem; color: var(--muted); }
+.tally strong { color: var(--ink); font-weight: 600; }
+.tally.clean strong { color: var(--fix); }
+select, .btn { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: .35rem .7rem; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); font-weight: 500; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 0; margin: 0 1.5rem; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.editor-wrap { position: relative; min-height: 0; border-right: 1px solid var(--rule); }
+#editor { position: absolute; inset: 0; }
+#placeholder { position: absolute; top: 14px; left: 74px; right: 1rem; pointer-events: none; white-space: pre;
+  font: 14px/22px var(--mono); color: var(--muted); opacity: .75; overflow: hidden; }
+#placeholder[hidden] { display: none; }
+aside { display: flex; flex-direction: column; min-height: 0; }
+.tabs { display: flex; gap: 1.25rem; padding: .7rem 1.25rem 0; border-bottom: 1px solid var(--rule); }
+.tabs button { background: none; border: 0; padding: .3rem 0 .6rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
+.panel { flex: 1; overflow: auto; padding: 1rem 1.25rem 1.5rem; }
+.panel[hidden] { display: none; }
+
+/* the margin notes: the one bold element */
+.note { position: relative; padding: .2rem 0 .2rem 1.1rem; margin: 0 0 1.4rem; border-left: 2px solid var(--pencil); cursor: pointer; }
+.note.lexer { border-left-style: dashed; }
+.note:hover, .note.active { background: linear-gradient(90deg, var(--pencil-wash), transparent 70%); }
+.note .where { font: 500 .78rem var(--mono); color: var(--pencil); }
+.note h3 { margin: .1rem 0 .35rem; font-size: 1rem; font-weight: 600; line-height: 1.35; }
+.note p { margin: 0 0 .5rem; color: var(--ink); max-width: 62ch; }
+.note .root { color: var(--muted); font-size: .9rem; }
+.note .root b { color: var(--pencil); font-weight: 500; }
+.note .alt { color: var(--muted); font-size: .9rem; }
+.note .actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.note .apply { background: none; border: 1px solid var(--fix); color: var(--fix); border-radius: 5px; padding: .2rem .6rem; cursor: pointer; font-weight: 500; }
+.note .apply:hover { background: var(--fix); color: var(--surface); }
+.conf { font-size: .85rem; color: var(--muted); }
+.conf.high { color: var(--fix); } .conf.medium { color: var(--amber); } .conf.low { color: var(--pencil); }
+.empty { color: var(--muted); max-width: 40ch; }
+.empty strong { color: var(--fix); display: block; font-size: 1.05rem; margin-bottom: .3rem; }
+
+pre.tree { font: .82rem/1.5 var(--mono); margin: 0; white-space: pre; overflow-x: auto; font-variant-ligatures: none; }
+pre.tree[hidden], .tree-diagram[hidden] { display: none; }
+.tree-tools { display: flex; align-items: center; gap: .4rem; margin-bottom: .8rem; flex-wrap: wrap; }
+.tree-tools .spacer { flex: 1; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { background: var(--surface); border: 0; padding: .25rem .7rem; cursor: pointer; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.tree-tools .btn { padding: .2rem .6rem; min-width: 2.2rem; }
+.tree-diagram { overflow: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--bg); max-height: calc(100vh - 16rem); }
+.tree-diagram svg { display: block; }
+.tree-diagram text { font: 12px var(--mono); font-variant-ligatures: none; fill: var(--ink); dominant-baseline: central; text-anchor: middle; }
+.tree-diagram path { fill: none; stroke: var(--muted); stroke-opacity: .55; stroke-width: 1.2; }
+.tree-diagram .nt rect { fill: var(--surface); stroke: var(--rule); }
+.tree-diagram .nt text { fill: var(--muted); }
+.tree-diagram g.nt { cursor: pointer; }
+.tree-diagram g.nt:hover rect { stroke: var(--ink); }
+.tree-diagram .nt.closed rect { fill: var(--bg); stroke-dasharray: 4 3; stroke: var(--muted); }
+.tree-diagram .nt.closed text { fill: var(--ink); }
+.tree-diagram .nt.has-ins rect { stroke: var(--fix); stroke-width: 2; stroke-dasharray: none; }
+.tree-diagram .tok rect { fill: var(--surface); stroke: var(--ink); stroke-width: 1.3; }
+.tree-diagram .tok text { font-weight: 500; }
+.tree-diagram .ins rect { fill: var(--fix); stroke: var(--fix); }
+.tree-diagram .ins text { fill: var(--surface); font-weight: 600; }
+.tree-legend { color: var(--muted); font-size: .85rem; margin: .6rem 0 0; }
+.tree-legend span { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: -1px; margin: 0 .3rem 0 .9rem; }
+pre.tree .ins { color: var(--fix); }
+.compare { margin-top: 1rem; }
+.compare table { border-collapse: collapse; width: 100%; max-width: 30rem; }
+.compare td { padding: .45rem 0; border-bottom: 1px solid var(--rule); }
+.compare td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+footer { padding: .7rem 1.5rem 1rem; color: var(--muted); font-size: .88rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+footer kbd { font: .8rem var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .3rem; }
+
+/* editor decorations */
+.rc-line { background: var(--pencil-wash); }
+.rc-glyph::before { content: ""; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--pencil); margin: 7px 0 0 6px; }
+
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; grid-template-rows: 55vh auto; margin: 0 .75rem; }
+  .editor-wrap { border-right: 0; border-bottom: 1px solid var(--rule); }
+  header, footer { padding-left: .75rem; padding-right: .75rem; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">ExplainParse<small>syntax errors that explain themselves</small></div>
+  <label>
+    <span class="visually-hidden" style="position:absolute;left:-9999px">Load an example</span>
+    <select id="examples" aria-label="Load an example"><option value="">Load an example…</option></select>
+  </label>
+  <span class="spacer"></span>
+  <span class="tally" id="tally" aria-live="polite">Checking…</span>
+  <button class="btn" id="clear">Clear</button>
+  <button class="btn primary" id="fixall" disabled>Fix all</button>
+</header>
+
+<main>
+  <div class="editor-wrap">
+    <div id="editor" role="region" aria-label="Lumen source code"></div>
+    <div id="placeholder" aria-hidden="true">Type or paste your Lumen code here.
+Mistakes are explained as you type.
+
+For example:
+fn main() -> int {
+    let x: int = 5;
+    return x;
+}</div>
+  </div>
+  <aside>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="errors">Errors</button>
+      <button role="tab" aria-selected="false" data-tab="tree">Parse tree</button>
+      <button role="tab" aria-selected="false" data-tab="compare">Compared with panic mode</button>
+    </div>
+    <div class="panel" id="panel-errors" role="tabpanel"></div>
+    <div class="panel" id="panel-tree" role="tabpanel" hidden>
+      <div class="tree-tools">
+        <div class="seg" role="group" aria-label="Tree view">
+          <button data-view="diagram" aria-pressed="true">Diagram</button>
+          <button data-view="text" aria-pressed="false">Text</button>
+        </div>
+        <button class="btn" id="expand-all">Expand all</button>
+        <button class="btn" id="collapse-all">Reset</button>
+        <span class="spacer"></span>
+        <button class="btn" id="zoom-out" aria-label="Zoom out">−</button>
+        <button class="btn" id="zoom-fit">Fit</button>
+        <button class="btn" id="zoom-in" aria-label="Zoom in">+</button>
+      </div>
+      <div class="tree-diagram" id="tree-diagram"></div>
+      <p class="tree-legend" id="tree-legend">Click a grammar rule to expand or collapse it (<b>+N</b> = tokens hidden inside). Dark-outlined boxes are tokens from your code;<span style="background:var(--fix)"></span>filled boxes were inserted by a fix, and collapsed rules hiding one get a green outline. <b>›</b> joins rules with a single child, and recursive lists such as <code>stmt_list</code> are drawn as one row.</p>
+      <pre class="tree" id="tree" hidden></pre>
+    </div>
+    <div class="panel" id="panel-compare" role="tabpanel" hidden>
+      <p class="empty" style="max-width:52ch">Classic panic-mode recovery skips tokens until it can resynchronise, and often reports one mistake several times. ExplainParse searches for the smallest repair, so each mistake is reported once.</p>
+      <div class="compare"><table>
+        <tr><td>Errors reported by panic mode</td><td id="cmp-base">–</td></tr>
+        <tr><td>Errors reported by ExplainParse</td><td id="cmp-ours">–</td></tr>
+        <tr><td>Follow-on errors avoided</td><td id="cmp-saved">–</td></tr>
+      </table></div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span>Lumen: a small typed language with functions, <code>let</code>, <code>if/else</code> and <code>while</code>.</span>
+  <span>Click a note to jump to it. <kbd>Ctrl</kbd>+<kbd>.</kbd> in the editor shows quick fixes.</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+<script>
+const API = (window.EXPLAINPARSE_API || "") + "/api";
+const START = "";
+let editor, model, last = null, timer = null, decorations = [];
+let engine = null, enginePromise = null;
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+function isDark() {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+}
+
+require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs" } });
+require(["vs/editor/editor.main"], () => {
+  monaco.languages.register({ id: "lumen" });
+  monaco.languages.setMonarchTokensProvider("lumen", {
+    keywords: ["fn", "let", "if", "else", "while", "return", "true", "false"],
+    types: ["int", "bool", "str"],
+    tokenizer: { root: [
+      [/\/\/.*$/, "comment"], [/\/\*/, "comment", "@comment"],
+      [/"([^"\\]|\\.)*"?/, "string"],
+      [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@types": "type", "@default": "identifier" } }],
+      [/\d+/, "number"], [/[{}()]/, "delimiter.bracket"], [/[-+*\/%<>=!&|:;,]+/, "operator"],
+    ], comment: [[/\*\//, "comment", "@pop"], [/./, "comment"]] },
+  });
+  monaco.editor.defineTheme("ep-light", { base: "vs", inherit: true, rules: [
+    { token: "keyword", foreground: "1b2430", fontStyle: "bold" }, { token: "type", foreground: "127c7a" },
+    { token: "string", foreground: "8a4f12" }, { token: "number", foreground: "2f6fd6" },
+    { token: "comment", foreground: "8795a3", fontStyle: "italic" } ],
+    colors: { "editor.background": "#ffffff", "editorLineNumber.foreground": "#a6b1bc", "editorError.foreground": "#c8323c" } });
+  monaco.editor.defineTheme("ep-dark", { base: "vs-dark", inherit: true, rules: [
+    { token: "keyword", foreground: "e3e9ef", fontStyle: "bold" }, { token: "type", foreground: "4fc2bf" },
+    { token: "string", foreground: "e0a64b" }, { token: "number", foreground: "8fb4ff" },
+    { token: "comment", foreground: "6c7b8a", fontStyle: "italic" } ],
+    colors: { "editor.background": "#1c242d", "editorLineNumber.foreground": "#56636f", "editorError.foreground": "#f06a72" } });
+
+  editor = monaco.editor.create($("editor"), {
+    value: START, language: "lumen", theme: isDark() ? "ep-dark" : "ep-light",
+    fontFamily: "JetBrains Mono, ui-monospace, Consolas, monospace", fontSize: 14, lineHeight: 22,
+    minimap: { enabled: false }, glyphMargin: true, automaticLayout: true, scrollBeyondLastLine: false,
+    renderLineHighlight: "none", padding: { top: 14 }, tabSize: 4,
+  });
+  model = editor.getModel();
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () =>
+    monaco.editor.setTheme(isDark() ? "ep-dark" : "ep-light"));
+  const syncPlaceholder = () => { $("placeholder").hidden = model.getValueLength() > 0; };
+  model.onDidChangeContent(() => { syncPlaceholder(); clearTimeout(timer); timer = setTimeout(check, 300); });
+  syncPlaceholder();
+  editor.focus();
+
+  monaco.languages.registerCodeActionProvider("lumen", {
+    provideCodeActions(m, range, context) {
+      if (!last) return { actions: [], dispose() {} };
+      const actions = last.diagnostics
+        .filter((d) => d.fix && context.markers.some((mk) => mk.startLineNumber === d.line))
+        .map((d) => ({ title: `Fix: ${d.fix.description}`, kind: "quickfix", isPreferred: d.confidence === "high",
+          edit: { edits: d.fix.edits.map((e) => ({ resource: m.uri, versionId: undefined,
+            textEdit: { range: rangeOf(e.start, e.end), text: e.text } })) } }));
+      return { actions, dispose() {} };
+    },
+  });
+  check();
+});
+
+function rangeOf(start, end) {
+  const a = model.getPositionAt(start), b = model.getPositionAt(end);
+  return new monaco.Range(a.lineNumber, a.column, b.lineNumber, b.column);
+}
+
+// Two ways to run the checker: the local Python server (python -m explainparse.server), or
+// in the browser itself via Pyodide (used on GitHub Pages, where there is no server).
+
+
+async function serverEngine() {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 1500);
+  try {
+    const r = await fetch(`${API}/health`, { signal: ctl.signal });
+    if (!r.ok) return null;
+  } catch { return null; } finally { clearTimeout(t); }
+  return {
+    analyze: async (source) => {
+      const r = await fetch(`${API}/analyze`, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source }) });
+      if (!r.ok) throw new Error(`server answered ${r.status}`);
+      return r.json();
+    },
+    examples: async () => {
+      const r = await fetch(`${API}/examples`);
+      return r.json();
+    },
+  };
+}
+
+async function browserEngine() {
+  $("tally").textContent = "Loading the checker into your browser…";
+  await new Promise((ok, fail) => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+    s.onload = ok; s.onerror = fail; document.head.appendChild(s);
+  });
+  const py = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/" });
+  const bundle = await (await fetch("bundle.json")).json();
+  py.FS.mkdirTree("/home/pyodide/explainparse");
+  for (const [name, src] of Object.entries(bundle.files)) py.FS.writeFile(`/home/pyodide/explainparse/${name}`, src);
+  py.runPython("import sys, json; sys.path.insert(0, '/home/pyodide'); import explainparse");
+  return {
+    analyze: async (source) => {
+      py.globals.set("SOURCE", source);
+      return JSON.parse(py.runPython("json.dumps(explainparse.analyze(SOURCE).to_dict())"));
+    },
+    examples: async () => bundle.examples,
+  };
+}
+
+function getEngine() {
+  if (!enginePromise) {
+    enginePromise = (async () => (await serverEngine()) || (await browserEngine()))();
+    enginePromise.then((e) => { engine = e; }, () => { enginePromise = null; });
+  }
+  return enginePromise;
+}
+
+async function check() {
+  const source = model.getValue();
+  try {
+    const eng = await getEngine();
+    const result = await eng.analyze(source);
+    if (model.getValue() !== source) return;   // user kept typing; a newer check is coming
+    last = result;
+    render();
+  } catch (err) {
+    console.error(err);
+    $("tally").innerHTML = `<strong>The checker couldn't start.</strong> Run <code>python -m explainparse.server</code> and open the page it prints.`;
+  }
+}
+
+function render() {
+  const ds = last.diagnostics;
+  const lines = model.getLineCount();
+  monaco.editor.setModelMarkers(model, "explainparse", ds.map((d) => {
+    const lab = d.labels.find((l) => l.primary) || d.labels[0];
+    const ln = Math.min(lab.line, lines);
+    return { severity: monaco.MarkerSeverity.Error, message: `${d.title}\n\n${d.why}`, code: d.code,
+      startLineNumber: ln, startColumn: lab.col, endLineNumber: ln, endColumn: lab.col + Math.max(lab.length, 1) };
+  }));
+  decorations = editor.deltaDecorations(decorations, ds.filter((d) => d.root_cause).map((d) => {
+    const ln = Math.min(d.root_cause.line, lines);
+    return { range: new monaco.Range(ln, 1, ln, 1),
+      options: { isWholeLine: true, className: "rc-line", glyphMarginClassName: "rc-glyph",
+        glyphMarginHoverMessage: { value: `Root cause: ${d.root_cause.note}` } } };
+  }));
+
+  const n = ds.length;
+  $("tally").className = "tally" + (n ? "" : " clean");
+  $("tally").innerHTML = n ? `<strong>${n} error${n > 1 ? "s" : ""}</strong>`
+    : model.getValue().trim() === "" ? "Ready" : `<strong>No errors</strong>`;
+  $("fixall").disabled = !n;
+
+  $("panel-errors").innerHTML = n ? ds.map((d, i) => `
+    <article class="note ${d.phase}" data-i="${i}" tabindex="0">
+      <div class="where">line ${d.line}, column ${d.col} · ${d.code}</div>
+      <h3>${code(d.title)}</h3>
+      <p>${code(d.why)}</p>
+      ${d.root_cause ? `<p class="root"><b>Root cause, line ${d.root_cause.line}:</b> ${code(d.root_cause.note)}</p>` : ""}
+      ${d.alternative ? `<p class="alt">Another possibility: ${code(d.alternative)}</p>` : ""}
+      ${d.fix ? `<div class="actions"><button class="apply" data-i="${i}">${esc(cap(d.fix.description))}</button>
+        <span class="conf ${d.confidence}">${d.confidence} confidence</span></div>` : ""}
+    </article>`).join("")
+    : model.getValue().trim() === ""
+    ? `<div class="empty"><strong>Waiting for your code.</strong>Write a Lumen program on the left, or pick one from <em>Load an example</em>. Every mistake will be explained here.</div>`
+    : `<div class="empty"><strong>No syntax errors.</strong>Break something on purpose to see how each mistake gets explained: delete a <code>}</code>, misspell <code>while</code>, or drop a <code>;</code>.</div>`;
+
+  $("tree").innerHTML = last.tree ? treeText(last.tree, "") : "The parse tree appears once the program can be repaired.";
+  if (!$("panel-tree").hidden && treeView === "diagram") drawTree();
+  const ours = last.explainparse_errors, base = last.baseline_errors;
+  $("cmp-base").textContent = base;
+  $("cmp-ours").textContent = ours;
+  $("cmp-saved").textContent = Math.max(base - ours, 0);
+}
+
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+function treeText(node, indent) {
+  if (node.lexeme !== undefined) {
+    const t = esc(node.lexeme || node.symbol);
+    return `${indent}${node.synthetic ? `<span class="ins">${t}  (inserted)</span>` : t}\n`;
+  }
+  let label = [node.symbol], kids = node.children || [];
+  while (kids.length === 1 && kids[0].lexeme === undefined) { label.push(kids[0].symbol); kids = kids[0].children || []; }
+  if (label.length > 3) label = [label[0], "…", label[label.length - 1]];
+  return `${indent}${label.join(" › ")}\n` + kids.map((k) => treeText(k, indent + "  ")).join("");
+}
+
+// ---- parse tree diagram ------------------------------------------------
+// Collapsible top-down diagram. Recursive list rules (stmt_list -> stmt stmt_list, item_list,
+// param_tail, args_tail, and the operator tails) are drawn flat as one row of siblings.
+const NODE_H = 26, LEVEL_H = 58, GAP = 10, CHAR_W = 7.3, PAD = 18;
+let treeView = "diagram", zoom = 1, fitMode = true;
+let treeState = {};          // key -> true (open) / false (closed); remembered while you type
+const COLLAPSE_BY_DEFAULT = /^(stmt|expr|params|args)\b/;
+
+function shape(node, key) {
+  if (node.lexeme !== undefined)
+    return { key, label: node.lexeme || node.symbol, leaf: true, synthetic: node.synthetic, children: [] };
+  const chain = [node.symbol];
+  let kids = node.children || [];
+  while (kids.length === 1 && kids[0].lexeme === undefined) { chain.push(kids[0].symbol); kids = kids[0].children || []; }
+  // flatten recursive lists: a child with the same rule as this node is spliced into this row
+  const last = chain[chain.length - 1];
+  const flat = [];
+  const spread = (list) => list.forEach((k) => {
+    if (k.lexeme === undefined && k.symbol === last) spread(k.children || []);
+    else if (k.symbol !== "EOF") flat.push(k);
+  });
+  spread(kids);
+  let label = chain.length > 3 ? [chain[0], "…", last] : chain;
+  const n = { key, label: label.join(" › "), leaf: false, children: flat.map((k, i) => shape(k, `${key}.${i}`)) };
+  n.hasIns = n.children.some((c) => c.synthetic || c.hasIns);
+  n.tokens = n.children.reduce((t, c) => t + (c.leaf ? 1 : c.tokens), 0);
+  return n;
+}
+function isOpen(n) {
+  if (n.leaf || !n.children.length) return true;
+  if (n.key in treeState) return treeState[n.key];
+  return n.tokens <= 1 || !COLLAPSE_BY_DEFAULT.test(n.label);
+}
+function visibleKids(n) { return isOpen(n) ? n.children : []; }
+function measure(n) {
+  const kids = visibleKids(n);
+  n.text = n.leaf || isOpen(n) ? n.label : `${n.label}  +${n.tokens}`;
+  n.w = n.text.length * CHAR_W + PAD;
+  const inner = kids.reduce((s, c) => s + measure(c), 0) + GAP * Math.max(kids.length - 1, 0);
+  n.span = Math.max(n.w, inner);
+  return n.span;
+}
+function place(n, left, depth, acc) {
+  n.cx = left + n.span / 2;
+  n.y = 12 + depth * LEVEL_H;
+  acc.depth = Math.max(acc.depth, depth);
+  const kids = visibleKids(n);
+  const inner = kids.reduce((s, c) => s + c.span, 0) + GAP * Math.max(kids.length - 1, 0);
+  let x = left + (n.span - inner) / 2;
+  for (const c of kids) { place(c, x, depth + 1, acc); x += c.span + GAP; }
+}
+function svgParts(n, edges, nodes) {
+  for (const c of visibleKids(n)) {
+    const y1 = n.y + NODE_H, y2 = c.y, mid = (y1 + y2) / 2;
+    edges.push(`<path d="M${n.cx},${y1} C${n.cx},${mid} ${c.cx},${mid} ${c.cx},${y2}"/>`);
+    svgParts(c, edges, nodes);
+  }
+  const closed = !n.leaf && !isOpen(n);
+  const cls = n.leaf ? (n.synthetic ? "tok ins" : "tok") : `nt${closed ? " closed" : ""}${closed && n.hasIns ? " has-ins" : ""}`;
+  const tip = n.leaf ? (n.synthetic ? "inserted token" : "token") :
+    closed ? "grammar rule (click to expand)" : n.children.length ? "grammar rule (click to collapse)" : "grammar rule";
+  nodes.push(`<g class="${cls}" data-key="${n.key}"><title>${esc(tip)}: ${esc(n.label)}</title>` +
+    `<rect x="${n.cx - n.w / 2}" y="${n.y}" width="${n.w}" height="${NODE_H}" rx="6"/>` +
+    `<text x="${n.cx}" y="${n.y + NODE_H / 2}">${esc(n.text)}</text></g>`);
+}
+let currentTree = null;
+function drawTree() {
+  const box = $("tree-diagram");
+  if (!last || !last.tree) {
+    box.innerHTML = `<p class="empty" style="padding:1rem">The parse tree appears once there is code that can be repaired.</p>`;
+    return;
+  }
+  const root = shape(last.tree, "r"), acc = { depth: 0 };
+  currentTree = root;
+  measure(root); place(root, 10, 0, acc);
+  const W = root.span + 20, H = (acc.depth + 1) * LEVEL_H + 4;
+  if (fitMode) zoom = box.clientWidth ? Math.max(0.55, Math.min(1, (box.clientWidth - 4) / W)) : 1;
+  const edges = [], nodes = [];
+  svgParts(root, edges, nodes);
+  box.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W * zoom}" height="${H * zoom}" role="img" ` +
+    `aria-label="Parse tree diagram">${edges.join("")}${nodes.join("")}</svg>`;
+}
+function setAll(open) {
+  const walk = (n) => { if (!n.leaf && n.children.length) { treeState[n.key] = open; n.children.forEach(walk); } };
+  if (currentTree) walk(currentTree);
+  if (!open && currentTree) treeState[currentTree.key] = true;
+  drawTree();
+}
+$("tree-diagram").addEventListener("click", (ev) => {
+  const g = ev.target.closest && ev.target.closest("g.nt");
+  if (!g || !currentTree) return;
+  const find = (n) => n.key === g.dataset.key ? n : n.children.reduce((f, c) => f || find(c), null);
+  const n = find(currentTree);
+  if (n && n.children.length) { treeState[n.key] = !isOpen(n); drawTree(); }
+});
+$("expand-all").addEventListener("click", () => setAll(true));
+$("collapse-all").addEventListener("click", () => { treeState = {}; drawTree(); });
+
+function setTreeView(v) {
+  treeView = v;
+  document.querySelectorAll(".seg button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.view === v));
+  $("tree-diagram").hidden = v !== "diagram";
+  $("tree-legend").hidden = v !== "diagram";
+  $("tree").hidden = v !== "text";
+  ["zoom-in", "zoom-out", "zoom-fit", "expand-all", "collapse-all"].forEach((id) => { $(id).hidden = v !== "diagram"; });
+  if (v === "diagram") drawTree();
+}
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => setTreeView(b.dataset.view)));
+$("zoom-in").addEventListener("click", () => { fitMode = false; zoom = Math.min(zoom * 1.25, 3); drawTree(); });
+$("zoom-out").addEventListener("click", () => { fitMode = false; zoom = Math.max(zoom / 1.25, 0.15); drawTree(); });
+$("zoom-fit").addEventListener("click", () => { fitMode = true; drawTree(); });
+
+function applyFix(i) {
+  const d = last.diagnostics[i];
+  const edits = d.fix.edits.map((e) => ({ range: rangeOf(e.start, e.end), text: e.text, forceMoveMarkers: true }));
+  editor.pushUndoStop(); editor.executeEdits("explainparse", edits); editor.pushUndoStop();
+}
+
+$("panel-errors").addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".apply");
+  if (btn) { applyFix(+btn.dataset.i); return; }
+  const note = ev.target.closest(".note");
+  if (!note) return;
+  const d = last.diagnostics[+note.dataset.i];
+  document.querySelectorAll(".note.active").forEach((x) => x.classList.remove("active"));
+  note.classList.add("active");
+  editor.revealLineInCenter(d.line);
+  editor.setPosition({ lineNumber: d.line, column: d.col });
+  editor.focus();
+});
+$("panel-errors").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && ev.target.classList.contains("note")) ev.target.click();
+});
+
+$("clear").addEventListener("click", () => {
+  editor.pushUndoStop();
+  editor.executeEdits("explainparse", [{ range: model.getFullModelRange(), text: "" }]);
+  editor.pushUndoStop();
+  $("examples").value = "";
+  editor.focus();
+});
+
+$("fixall").addEventListener("click", () => {
+  editor.pushUndoStop();
+  editor.executeEdits("explainparse", [{ range: model.getFullModelRange(), text: last.fixed_source }]);
+  editor.pushUndoStop();
+});
+
+document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+  ["errors", "tree", "compare"].forEach((t) => { $(`panel-${t}`).hidden = t !== b.dataset.tab; });
+  if (b.dataset.tab === "tree" && treeView === "diagram") drawTree();
+}));
+
+getEngine().then((eng) => eng.examples()).then((list) => {
+  const sel = $("examples");
+  list.forEach((ex) => sel.add(new Option(ex.title, ex.name)));
+  sel.addEventListener("change", () => {
+    const ex = list.find((x) => x.name === sel.value);
+    if (ex && editor) editor.setValue(ex.source);
+  });
+}).catch(() => {});
+</script>
+</body>
+</html>
