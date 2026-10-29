@@ -107,6 +107,34 @@ class LL1Parser:
                 stack.append((s, c))
         return "ok", pos, stack, root, tokmap
 
+    def trace(self, tokens, limit=4000):
+        """Textbook LL(1) trace: the stack, the input position and the action at every step."""
+        stack, pos, steps = [self.start], 0, []
+        while stack and len(steps) < limit:
+            top, tok = stack[-1], tokens[pos]
+            if top in self.terminals:
+                if top != tok.kind:
+                    steps.append({"stack": list(stack), "pos": pos, "action": "error",
+                                  "sym": top, "la": tok.kind})
+                    return steps, False
+                steps.append({"stack": list(stack), "pos": pos, "action": "match", "sym": top})
+                stack.pop()
+                pos += 1
+                continue
+            prod = self.table[top].get(tok.kind)
+            if prod is None:
+                steps.append({"stack": list(stack), "pos": pos, "action": "error",
+                              "sym": top, "la": tok.kind})
+                return steps, False
+            steps.append({"stack": list(stack), "pos": pos, "action": "expand", "sym": top,
+                          "la": tok.kind, "prod": list(prod)})
+            stack.pop()
+            stack.extend(reversed(prod))
+        if not stack:
+            steps.append({"stack": [], "pos": pos, "action": "accept"})
+            return steps, False
+        return steps, True     # truncated
+
     def panic_mode_errors(self, kinds):
         """Classic panic-mode recovery (Dragon Book style) as a baseline.
         Returns the token indices where errors are reported. A new error is reported only

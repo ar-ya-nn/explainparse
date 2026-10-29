@@ -17,9 +17,15 @@ MUTATIONS = ["drop_semicolon", "drop_close_paren", "drop_close_brace", "drop_ope
 TYPO_TARGETS = {"while", "return", "bool", "else", "false"}
 
 
-def mutate(src, kind, rng):
+def mutate(src, kind, rng, lang="lumen"):
     """Return (mutant_source, line_of_mutation) or None if the program has no suitable site."""
-    toks = [t for t in lex(src)[0] if t.kind != "EOF"]
+    toks = [t for t in lex(src, lang)[0] if t.kind != "EOF"]
+    if not toks:
+        return None
+    from .languages import get_language
+    language = get_language(lang)
+    typo_targets = TYPO_TARGETS if language.id == "lumen" else {
+        k for k in language.keywords if len(k) >= 4 and k not in ("true",)}
 
     def delete(t):
         i = toks.index(t)
@@ -44,7 +50,7 @@ def mutate(src, kind, rng):
         ins = rng.choice([";", ")", "}", ",", "(", "="])
         return src[:t.start] + ins + src[t.start:], {t.line}
     if kind == "keyword_typo":
-        sites = [t for t in toks if t.kind in TYPO_TARGETS]
+        sites = [t for t in toks if t.kind in typo_targets]
         if not sites:
             return None
         t = rng.choice(sites)
@@ -69,7 +75,7 @@ def evaluate(files, per_type=40, seed=7):
             if m is None:
                 continue
             mutant, site = m
-            res = analyze(mutant)
+            res = analyze(mutant, semantic_checks=False)   # syntax-only evaluation
             if not res.diagnostics:
                 continue           # mutation happened to produce a valid program
             made += 1

@@ -3,31 +3,39 @@ from dataclasses import dataclass, field
 from typing import List, Optional
 from .lexer import lex
 from .parser import LL1Parser, Node
-from .tokens import Token, KEYWORDS
+from .grammar import Grammar
+from .tokens import Token
 from .diagnostics import Diagnostic, apply_edits
+from .languages import get_language, Language, LANGUAGES
 from . import explain
+from . import semantic
 
 WINDOW = 6       # tokens a repair must let the parser advance to be fully trusted
 BACK = 3         # how many tokens before the error point repairs may be placed
 TYPO_BACK = 12   # how far back to look for misspelled keywords
 MAX_ERRORS = 25
 
-TYPE_GROUP = frozenset({"int", "bool", "str"})
+# Groups cover every language's keywords (a keyword of another language is just an ID here).
+TYPE_GROUP = frozenset(t for l in LANGUAGES.values() for t in l.types)
 VALUE_GROUP = frozenset({"INT", "STRING", "ID", "true", "false"})
 OP_GROUP = frozenset({"+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "&&", "||"})
-STRUCTURAL = frozenset({"fn", "let", "if", "else", "while", "return"})
+STRUCTURAL = frozenset({"fn", "let", "if", "else", "while", "return", "class", "public",
+                        "private", "static"})
 NO_SPACE_BEFORE = frozenset({";", ")", ",", ":"})
 PLACEHOLDER = {"ID": "name", "INT": "0", "STRING": '""'}
 PRIORITY = {";": 6, ")": 5, "}": 5, ",": 4, "INT": 3, "int": 3, "+": 2, "ID": 1}
 
-_parser = None
+_parsers = {}
 
 
-def get_parser():
-    global _parser
-    if _parser is None:
-        _parser = LL1Parser()
-    return _parser
+def get_parser(lang="lumen"):
+    """One LL(1) parser per language, built once from that language's grammar text."""
+    lang = get_language(lang)
+    if lang.id not in _parsers:
+        p = LL1Parser(Grammar(lang.grammar))
+        p.lang = lang
+        _parsers[lang.id] = p
+    return _parsers[lang.id]
 
 
 def group_of(t):
@@ -50,6 +58,9 @@ class Candidate:
     typo: bool = False
     typo_dist: int = 0
     root: Optional[dict] = None
+    cost: float = 0.0         # score parts, kept for the "How did it decide?" view
+    dist: float = 0.0
+    lookahead: bool = False
 
 
 @dataclass
@@ -60,17 +71,23 @@ class AnalysisResult:
     fixed_source: str
     baseline_errors: int
     tokens: List[Token] = field(default_factory=list)
+    language: str = "lumen"
+    lex_tokens: List[Token] = field(default_factory=list)
 
     @property
     def ok(self):
         return not self.diagnostics
 
     def to_dict(self):
-        return {"ok": self.ok,
+        return {"ok": self.ok, "language": self.language,
+                "semantic_errors": len([d for d in self.diagnostics if d.phase == "semantic"]),
                 "diagnostics": [d.to_dict() for d in self.diagnostics],
                 "fixed_source": self.fixed_source,
                 "baseline_errors": self.baseline_errors,
                 "explainparse_errors": len([d for d in self.diagnostics if d.phase == "parser"]),
+                "lex_tokens": [{"kind": t.kind, "lexeme": t.lexeme, "line": t.line, "col": t.col,
+                                "start": t.start, "end": t.end} for t in self.lex_tokens
+                               if t.kind != "EOF"],
                 "tree": self.tree.to_dict() if self.tree else None}
 
 
@@ -90,13 +107,18 @@ def damerau(a, b):
     return d[len(a)][len(b)]
 
 
-def keyword_typo(word):
+def keyword_typo(word, keywords=None):
+    keywords = get_language("lumen").keywords if keywords is None else keywords
     best = None
-    for kw in KEYWORDS:
+    for kw in keywords:
         if abs(len(kw) - len(word)) > 2 or len(word) < 2:
             continue
-        dist = damerau(word.lower(), kw)
-        if dist == 0 or dist > 2 or (dist == 2 and len(kw) < 5):
+        dist = damerau(word.lower(), kw.lower())
+        if dist == 0 and word != kw:
+            dist = 1      # wrong capitalisation, e.g. 'string' for Java's 'String'
+        elif dist == 0:
+            continue
+        if dist > 2 or (dist == 2 and len(kw) < 5):
             continue
         if best is None or dist < best[1]:
             best = (kw, dist)
@@ -153,6 +175,7 @@ def _score(c, e, expected):
     if c.typo:
         cost = -2.5 if c.typo_dist == 1 else -1.5   # a near-keyword is strong evidence
     dist = 0 if c.typo else 0.6 * (e - c.pos)
+    c.cost, c.dist = cost, dist
     bonus = 0.5 if (c.kind == "insert" and c.pos == e and c.terminal in expected) else 0
     return min(c.advanced, WINDOW) * 3 - cost - dist + bonus
 
@@ -167,13 +190,16 @@ def _layout_bonus(c, work):
     return 0.0
 
 
-def search_repairs(parser, work, kinds, snaps, e, expected):
+def search_repairs(parser, work, kinds, snaps, e, expected, stats=None):
     insertable = sorted(t for t in parser.terminals if t != "EOF")
+    keywords = parser.lang.keywords if hasattr(parser, "lang") else None
     cands = []
+    tried = [0]
 
     def consider(kind, p, t, **kw):
         if p not in snaps:
             return
+        tried[0] += 1
         c = Candidate(kind, p, t, **kw)
         c.advanced = _evaluate(parser, kinds, snaps, e, kind, p, t)
         if c.advanced >= 1:
@@ -199,11 +225,14 @@ def search_repairs(parser, work, kinds, snaps, e, expected):
     for p in range(max(0, e - TYPO_BACK), e + 1):
         tok = work[p]
         if tok.kind == "ID" and not tok.synthetic:
-            hit = keyword_typo(tok.lexeme)
+            hit = keyword_typo(tok.lexeme, keywords)
             if hit:
                 consider("replace", p, hit[0], typo=True, typo_dist=hit[1])
     cands.sort(key=lambda c: (c.score, PRIORITY.get(c.terminal, 0), -abs(e - c.pos)), reverse=True)
     _lookahead_rerank(parser, work, kinds, snaps, e, cands, expected)
+    if stats is not None:
+        stats["tried"] = tried[0]
+        stats["viable"] = len([c for c in cands if c.advanced >= 2])
     return [c for c in cands if c.advanced >= 2]
 
 
@@ -220,6 +249,7 @@ def _lookahead_rerank(parser, work, kinds, snaps, e, cands, expected, top=12):
     the right first edit may only work once a cheap second edit (e.g. a keyword typo fix)
     is made, so score each promising first edit together with its best follow-up."""
     insertable = sorted(t for t in parser.terminals if t != "EOF")
+    keywords = parser.lang.keywords if hasattr(parser, "lang") else None
     pool = cands[:top] + [c for c in cands[top:]
                           if c.kind == "insert" and c.pos == e and c.terminal in expected]
     for c in pool:
@@ -248,7 +278,7 @@ def _lookahead_rerank(parser, work, kinds, snaps, e, cands, expected, top=12):
             tok = nwork[p2] if p2 < len(nwork) else None
             if tok is None or tok.kind != "ID" or tok.synthetic or p2 not in ns:
                 continue
-            hit = keyword_typo(tok.lexeme)
+            hit = keyword_typo(tok.lexeme, keywords)
             if hit:
                 adv2 = _evaluate(parser, nk, ns, e2, "replace", p2, hit[0])
                 if adv2 >= 1:
@@ -260,6 +290,7 @@ def _lookahead_rerank(parser, work, kinds, snaps, e, cands, expected, top=12):
         combined = base + best_gain - 0.5                 # small penalty for needing two edits
         if combined > c.score:
             c.score = combined
+            c.lookahead = True
             c.advanced = max(c.advanced, min(WINDOW, int(best_gain // 3) + 1))
     cands.sort(key=lambda c: (c.score, PRIORITY.get(c.terminal, 0), -abs(e - c.pos)), reverse=True)
 
@@ -384,10 +415,75 @@ def make_edit(work, c, source, layout, brace_indent=None):
     return work[:c.pos] + [new] + work[c.pos + 1:], (tok.start, tok.end, text), new
 
 
+# ---------------------------------------------------------------- "How did it decide?"
+def _row(c, work, chosen):
+    progress = min(c.advanced, WINDOW)
+    other = c.score - (3 * progress - c.cost - c.dist)
+    return {"fix": explain.describe_candidate(c, work), "chosen": chosen,
+            "progress": progress, "cost": round(c.cost, 2), "distance": round(c.dist, 2),
+            "adjust": round(other, 2), "score": round(c.score, 2), "lookahead": c.lookahead}
+
+
+def decision_info(best, cands, kinds, work, e, expected, conf, stats, moved_from=None):
+    """Everything the parser weighed for one error, in a form the UI can show."""
+    found = work[e]
+    shown, seen = [], set()
+    bk = outcome_key(best, kinds, e)
+    if best not in cands:
+        shown.append(_row(best, work, True))
+        seen.add(bk)
+    for c in cands:
+        k = outcome_key(c, kinds, e)
+        if k in seen:
+            continue
+        seen.add(k)
+        shown.append(_row(c, work, k == bk))
+        if len(shown) >= 5:
+            break
+    rival = next((c for c in cands if outcome_key(c, kinds, e) != bk), None)
+    margin = round(best.score - rival.score, 2) if rival is not None else None
+    steps = [
+        f"The LL(1) parser stopped at {explain.describe_token(found)} "
+        f"(line {found.line}, column {found.col}): no table entry matches it.",
+        f"At that point the grammar allowed {explain.expected_text(expected)}.",
+        f"It tried {stats.get('tried', 0)} single-token edits (inserting, deleting or replacing a "
+        f"token up to {BACK} tokens back, and fixing misspelled keywords up to {TYPO_BACK} back), "
+        f"re-parsing from the saved stack each time. {stats.get('viable', 0)} let parsing "
+        f"continue at least 2 tokens.",
+        f"Each fix is scored as 3 × tokens parsed after it (up to {WINDOW}) − edit cost − "
+        f"distance from the error, plus adjustments for layout, typos and two-edit lookahead.",
+    ]
+    if moved_from:
+        for r in shown:
+            if r["fix"] == moved_from and not r["chosen"]:
+                r["moved"] = True
+        steps.append(f"Root-cause analysis moved the fix: the best-scoring repair was to "
+                     f"{moved_from}, but indentation shows where the block really ends.")
+        steps.append(f"Confidence is {conf}: several places for the '}}' let parsing continue "
+                     f"equally well, and the indentation evidence picks this one.")
+        margin = None
+    elif margin is None:
+        steps.append("No different fix worked, so confidence is high.")
+    else:
+        steps.append(f"Confidence is {conf}: the chosen fix scores {margin:g} above the best "
+                     f"different fix (high if at least 2.5, medium if at least 1.0).")
+    return {"kind": "repair", "steps": steps, "candidates": shown, "margin": margin}
+
+
 # ---------------------------------------------------------------- main entry
-def analyze(source: str) -> AnalysisResult:
-    parser = get_parser()
-    tokens, diagnostics = lex(source)
+def analyze(source: str, lang="lumen", semantic_checks=True) -> AnalysisResult:
+    language = get_language(lang)
+    parser = get_parser(language)
+    tokens, diagnostics = lex(source, language)
+    for d in diagnostics:
+        d.decision = {"kind": "rule", "steps": [
+            "Found by the lexer, while splitting the source into tokens (before parsing).",
+            f"The text here cannot form any {language.name} token, so a fixed lexical rule "
+            f"applies: {d.title}.",
+            "The lexer recovers (as noted in the explanation) so parsing can still continue."]}
+    if len(tokens) == 1 and not diagnostics:
+        # nothing written yet (only whitespace or comments): nothing to report
+        return AnalysisResult(source, [], None, source, 0, tokens, language.id, [])
     layout = Layout(source, tokens)
     baseline = len(parser.panic_mode_errors([t.kind for t in tokens]))
     work = list(tokens)
@@ -401,7 +497,8 @@ def analyze(source: str) -> AnalysisResult:
         if status == "ok":
             break
         expected = parser.expected(stack)
-        cands = search_repairs(parser, work, kinds, snaps, e, expected)
+        stats = {}
+        cands = search_repairs(parser, work, kinds, snaps, e, expected, stats)
         if cands:
             best = cands[0]
             conf = confidence_of(best, cands, kinds, e)
@@ -409,6 +506,7 @@ def analyze(source: str) -> AnalysisResult:
             best, conf = Candidate("delete", e, None), "low"
         else:
             best, conf = Candidate("insert", e, sorted(expected)[0]), "low"
+        moved_from = None
 
         # Root-cause localisation for unclosed blocks / parentheses
         brace_indent = None
@@ -419,7 +517,11 @@ def analyze(source: str) -> AnalysisResult:
                 if rc["pos"] < best.pos and rc["pos"] in snaps:
                     adv = _evaluate(parser, kinds, snaps, e, "insert", rc["pos"], "}")
                     if adv >= min(best.advanced, WINDOW):
+                        moved_from = explain.describe_candidate(best, work)
+                        old = best
                         best = Candidate("insert", rc["pos"], "}", adv, best.score)
+                        best.cost, best.dist = old.cost, old.dist
+                        best.score = old.score
                         conf = "high" if conf != "low" else "medium"
                 best.root = rc
         elif best.kind == "insert" and best.terminal == ")":
@@ -430,6 +532,8 @@ def analyze(source: str) -> AnalysisResult:
         ctx = explain.build_context(parser, work, e, expected)
         new_work, edit, synth = make_edit(work, best, source, layout, brace_indent)
         diag = explain.explain(best, ctx, conf, source, layout, edit, synth, cands)
+        diag.decision = decision_info(best, cands, kinds, work, e, expected, diag.confidence,
+                                      stats, moved_from)
         if conf != "high":
             bk = outcome_key(best, kinds, e)
             rival = next((c for c in cands if outcome_key(c, kinds, e) != bk), None)
@@ -439,7 +543,13 @@ def analyze(source: str) -> AnalysisResult:
         if (best.kind == "insert" and best.terminal == ")" and best.root
                 and work[best.root["opener"]].synthetic and prev is not None
                 and prev.code == "E204" and prev.fix.edits[-1][2].strip() == "("):
-            diagnostics[-1] = explain.merge_parens(prev, diag, edit, ctx, best, source)
+            merged = explain.merge_parens(prev, diag, edit, ctx, best, source)
+            merged.decision = prev.decision
+            if merged.decision:
+                merged.decision = dict(merged.decision, steps=merged.decision["steps"] + [
+                    "A second search then found the matching ')' was missing too, so both "
+                    "fixes are shown as one: the condition needs parentheses."])
+            diagnostics[-1] = merged
         else:
             diagnostics.append(diag)
         edits.append(edit)
@@ -448,6 +558,13 @@ def analyze(source: str) -> AnalysisResult:
     status, _, _, root, _ = parser.parse_tree(work)
     if status == "ok":
         tree = root
+    if semantic_checks and tree is not None and not diagnostics:
+        # Semantic analysis runs on syntactically correct programs only, so a guessed
+        # repair can never cause a misleading type error.
+        for d in semantic.check(tree, language, source):
+            diagnostics.append(d)
+            if d.fix:
+                edits.extend(d.fix.edits)
     diagnostics.sort(key=lambda d: (d.line, d.col))
     fixed = apply_edits(source, edits)
-    return AnalysisResult(source, diagnostics, tree, fixed, baseline, work)
+    return AnalysisResult(source, diagnostics, tree, fixed, baseline, work, language.id, tokens)

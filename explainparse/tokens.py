@@ -46,6 +46,6 @@ def describe_token(tok: Token) -> str:
         return f"number {tok.lexeme}"
     if tok.kind == "STRING":
         return f"string {tok.lexeme}"
-    if tok.kind in KEYWORDS:
+    if tok.kind[:1].isalpha():          # keywords of any language are named after themselves
         return f"keyword '{tok.lexeme}'"
     return f"'{tok.lexeme}'"

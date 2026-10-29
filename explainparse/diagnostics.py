@@ -29,9 +29,10 @@ class Diagnostic:
     labels: List[Label] = field(default_factory=list)
     fix: Optional[Fix] = None
     confidence: str = "high"
-    phase: str = "parser"            # 'lexer' or 'parser'
+    phase: str = "parser"            # 'lexer', 'parser' or 'semantic'
     root_cause: Optional[dict] = None  # {'line','col','note'} when the cause is elsewhere
     alternative: Optional[str] = None  # runner-up fix when we are not confident
+    decision: Optional[dict] = None    # what was weighed, for the "How did it decide?" view
 
     def to_dict(self):
         d = asdict(self)

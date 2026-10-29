@@ -6,74 +6,148 @@
 <title>ExplainParse playground</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #e9edf1; --surface: #ffffff; --ink: #1b2430; --muted: #5d6b7a; --rule: #d3dae2;
-  --pencil: #c8323c; --pencil-wash: rgba(200, 50, 60, .08); --fix: #127c7a; --amber: #a86a12;
-  --focus: #2f6fd6;
+  --bg: #eef1f5; --surface: #ffffff; --sunken: #f5f7fa; --ink: #18212c; --muted: #5d6b7a; --rule: #dbe1e8;
+  --pencil: #c8323c; --pencil-wash: rgba(200, 50, 60, .07); --fix: #127c7a; --fix-wash: rgba(18, 124, 122, .09);
+  --amber: #a86a12; --amber-wash: rgba(168, 106, 18, .09); --violet: #6a4fc4; --violet-wash: rgba(106, 79, 196, .08);
+  --focus: #2f6fd6; --side: #18212c; --side-ink: #dfe6ee; --side-muted: #8796a6; --side-hover: #222d3a;
+  --shadow: 0 1px 2px rgba(20, 30, 45, .06), 0 4px 16px rgba(20, 30, 45, .05);
   --sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #141a21; --surface: #1c242d; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2c3743;
-    --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --amber: #e0a64b;
+    --bg: #11161c; --surface: #19212a; --sunken: #151c24; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2a3542;
+    --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --fix-wash: rgba(79, 194, 191, .10);
+    --amber: #e0a64b; --amber-wash: rgba(224, 166, 75, .10); --violet: #a996f0; --violet-wash: rgba(169, 150, 240, .10);
+    --side: #0c1015; --side-ink: #dfe6ee; --side-muted: #7f8d9c; --side-hover: #18202a;
+    --shadow: none; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #141a21; --surface: #1c242d; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2c3743;
-  --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --amber: #e0a64b;
+  --bg: #11161c; --surface: #19212a; --sunken: #151c24; --ink: #e3e9ef; --muted: #93a1b0; --rule: #2a3542;
+  --pencil: #f06a72; --pencil-wash: rgba(240, 106, 114, .10); --fix: #4fc2bf; --fix-wash: rgba(79, 194, 191, .10);
+  --amber: #e0a64b; --amber-wash: rgba(224, 166, 75, .10); --violet: #a996f0; --violet-wash: rgba(169, 150, 240, .10);
+  --side: #0c1015; --side-ink: #dfe6ee; --side-muted: #7f8d9c; --side-hover: #18202a;
+  --shadow: none; color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
-body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); display: flex; flex-direction: column; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); display: grid; grid-template-columns: 260px minmax(0, 1fr); }
 button, select { font: inherit; color: inherit; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+code { font: .88em var(--mono); background: var(--sunken); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .25em; }
 
-header { display: flex; align-items: baseline; gap: 1.25rem; padding: .9rem 1.5rem; flex-wrap: wrap; }
-.brand { font-weight: 600; font-size: 1.15rem; letter-spacing: -.01em; }
-.brand small { font-weight: 400; color: var(--muted); font-size: .9rem; margin-left: .5rem; }
-.spacer { flex: 1; }
-.tally { font-size: .95rem; color: var(--muted); }
-.tally strong { color: var(--ink); font-weight: 600; }
-.tally.clean strong { color: var(--fix); }
-select, .btn { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: .35rem .7rem; cursor: pointer; }
-.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); font-weight: 500; }
+/* ---- session sidebar ---- */
+#sidebar { background: var(--side); color: var(--side-ink); display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.brand { padding: 1.1rem 1.1rem .9rem; }
+.brand b { display: block; font-size: 1.15rem; font-weight: 700; letter-spacing: -.01em; }
+.brand span { color: var(--side-muted); font-size: .85rem; }
+#new-session { margin: 0 .8rem .8rem; background: transparent; color: var(--side-ink); border: 1px solid #3a4756; border-radius: 8px; padding: .5rem .75rem; text-align: left; cursor: pointer; font-weight: 500; }
+#new-session:hover { background: var(--side-hover); }
+.side-label { color: var(--side-muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; padding: .4rem 1.1rem; }
+#sessions { list-style: none; margin: 0; padding: 0 .5rem; overflow: auto; flex: 1; }
+#sessions li { position: relative; }
+#sessions button.open { width: 100%; text-align: left; background: none; border: 0; color: var(--side-ink); padding: .55rem .6rem; border-radius: 7px; cursor: pointer; display: block; }
+#sessions button.open:hover { background: var(--side-hover); }
+#sessions li.current button.open { background: var(--side-hover); box-shadow: inset 3px 0 0 var(--fix); }
+#sessions .t { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 1.4rem; font-size: .92rem; }
+#sessions .m { display: flex; gap: .5rem; align-items: center; color: var(--side-muted); font-size: .75rem; }
+#sessions .badge { border: 1px solid #3a4756; border-radius: 4px; padding: 0 .3rem; }
+#sessions .dot { width: .45rem; height: .45rem; border-radius: 50%; background: var(--fix); display: inline-block; }
+#sessions .dot.bad { background: #f06a72; }
+#sessions .del { position: absolute; right: .35rem; top: .45rem; background: none; border: 0; color: var(--side-muted); cursor: pointer; opacity: 0; border-radius: 4px; padding: 0 .3rem; }
+#sessions li:hover .del, #sessions .del:focus-visible { opacity: 1; }
+#sessions .del:hover { color: #f06a72; }
+.side-foot { color: var(--side-muted); font-size: .78rem; padding: .8rem 1.1rem 1rem; border-top: 1px solid #263240; }
+
+/* ---- workspace ---- */
+#workspace { display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100vh; height: 100dvh; }
+.topbar { display: flex; align-items: center; gap: .75rem; padding: .8rem 1.25rem; flex-wrap: wrap; }
+#menu { display: none; }
+.langs { display: inline-flex; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 3px; box-shadow: var(--shadow); }
+.langs button { border: 0; background: none; padding: .3rem .8rem; border-radius: 6px; cursor: pointer; color: var(--muted); font-weight: 500; }
+.langs button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+select, .btn { background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: .38rem .75rem; cursor: pointer; box-shadow: var(--shadow); }
+.btn.primary { background: var(--fix); color: #fff; border-color: var(--fix); font-weight: 600; }
 .btn:disabled { opacity: .45; cursor: default; }
+.spacer { flex: 1; }
+.tally { font-size: .92rem; color: var(--muted); }
+.tally strong { color: var(--pencil); font-weight: 600; }
+.tally.clean strong { color: var(--fix); }
 
-main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr); gap: 0; margin: 0 1.5rem; border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; background: var(--surface); }
-.editor-wrap { position: relative; min-height: 0; border-right: 1px solid var(--rule); }
+main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, var(--split, 56%)) 14px minmax(0, 1fr); margin: 0 1.25rem; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+.editor-wrap { position: relative; min-height: 0; }
+/* draggable divider between the code and the parser panel */
+#divider { position: relative; background: var(--sunken); border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); cursor: col-resize; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; touch-action: none; user-select: none; }
+#divider:hover, #divider.dragging { background: var(--fix-wash); }
+#divider .grip { width: 3px; height: 2.4rem; border-radius: 2px; background: var(--rule); }
+#divider:hover .grip, #divider.dragging .grip { background: var(--fix); }
+#divider button { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--rule); background: var(--surface); color: var(--muted); font-size: .7rem; line-height: 1; padding: 0; cursor: pointer; display: grid; place-items: center; box-shadow: var(--shadow); position: relative; z-index: 1; }
+#divider button:hover { color: var(--surface); background: var(--fix); border-color: var(--fix); }
+body.resizing, body.resizing * { cursor: col-resize !important; user-select: none !important; }
+body.resizing iframe, body.resizing #editor { pointer-events: none; }
+/* hideable history */
+#hide-history { position: absolute; top: 1rem; right: .7rem; background: none; border: 1px solid #3a4756; color: var(--side-muted); border-radius: 6px; width: 1.8rem; height: 1.8rem; cursor: pointer; }
+#hide-history:hover { color: var(--side-ink); background: var(--side-hover); }
+.brand { position: relative; }
+@media (min-width: 981px) {
+  body.side-hidden { grid-template-columns: minmax(0, 1fr); }
+  body.side-hidden #sidebar { display: none; }
+}
 #editor { position: absolute; inset: 0; }
-#placeholder { position: absolute; top: 14px; left: 74px; right: 1rem; pointer-events: none; white-space: pre;
-  font: 14px/22px var(--mono); color: var(--muted); opacity: .75; overflow: hidden; }
+#placeholder { position: absolute; top: 14px; left: 74px; right: 1rem; pointer-events: none; white-space: pre; font: 14px/22px var(--mono); color: var(--muted); opacity: .75; overflow: hidden; }
 #placeholder[hidden] { display: none; }
-aside { display: flex; flex-direction: column; min-height: 0; }
+aside { display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
 .tabs { display: flex; gap: 1.25rem; padding: .7rem 1.25rem 0; border-bottom: 1px solid var(--rule); }
-.tabs button { background: none; border: 0; padding: .3rem 0 .6rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs button { background: none; border: 0; padding: .3rem 0 .6rem; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
-.panel { flex: 1; overflow: auto; padding: 1rem 1.25rem 1.5rem; }
+.panel { flex: 1; overflow: auto; padding: 1rem 1.1rem 1.5rem; background: var(--sunken); }
 .panel[hidden] { display: none; }
 
-/* the margin notes: the one bold element */
-.note { position: relative; padding: .2rem 0 .2rem 1.1rem; margin: 0 0 1.4rem; border-left: 2px solid var(--pencil); cursor: pointer; }
-.note.lexer { border-left-style: dashed; }
-.note:hover, .note.active { background: linear-gradient(90deg, var(--pencil-wash), transparent 70%); }
-.note .where { font: 500 .78rem var(--mono); color: var(--pencil); }
-.note h3 { margin: .1rem 0 .35rem; font-size: 1rem; font-weight: 600; line-height: 1.35; }
-.note p { margin: 0 0 .5rem; color: var(--ink); max-width: 62ch; }
+/* ---- error cards ---- */
+.note { background: var(--surface); border: 1px solid var(--rule); border-left: 3px solid var(--pencil); border-radius: 10px; padding: .8rem .95rem; margin: 0 0 .8rem; cursor: pointer; box-shadow: var(--shadow); }
+.note.lexer { border-left-color: var(--amber); }
+.note.semantic { border-left-color: var(--violet); }
+.note:hover, .note.active { box-shadow: 0 0 0 1px var(--muted), var(--shadow); }
+.note-head { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; font-size: .8rem; color: var(--muted); }
+.chip { font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; border-radius: 4px; padding: .05rem .4rem; }
+.chip.parser { color: var(--pencil); background: var(--pencil-wash); }
+.chip.lexer { color: var(--amber); background: var(--amber-wash); }
+.chip.semantic { color: var(--violet); background: var(--violet-wash); }
+.where { font-family: var(--mono); font-size: .76rem; }
+.note h3 { margin: .35rem 0 .3rem; font-size: 1rem; font-weight: 600; line-height: 1.35; }
+.note p { margin: 0 0 .5rem; max-width: 64ch; }
 .note .root { color: var(--muted); font-size: .9rem; }
-.note .root b { color: var(--pencil); font-weight: 500; }
+.note .root b { color: var(--pencil); font-weight: 600; }
 .note .alt { color: var(--muted); font-size: .9rem; }
-.note .actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
-.note .apply { background: none; border: 1px solid var(--fix); color: var(--fix); border-radius: 5px; padding: .2rem .6rem; cursor: pointer; font-weight: 500; }
-.note .apply:hover { background: var(--fix); color: var(--surface); }
-.conf { font-size: .85rem; color: var(--muted); }
-.conf.high { color: var(--fix); } .conf.medium { color: var(--amber); } .conf.low { color: var(--pencil); }
-.empty { color: var(--muted); max-width: 40ch; }
+.actions { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin-top: .2rem; }
+.apply { background: var(--fix-wash); border: 1px solid var(--fix); color: var(--fix); border-radius: 6px; padding: .22rem .65rem; cursor: pointer; font-weight: 600; }
+.apply:hover { background: var(--fix); color: var(--surface); }
+.how { background: none; border: 0; color: var(--muted); cursor: pointer; padding: .2rem .1rem; font-size: .88rem; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rule); }
+.how:hover { color: var(--ink); }
+.conf { font-size: .78rem; font-weight: 600; border-radius: 4px; padding: .05rem .4rem; margin-left: auto; }
+.conf.high { color: var(--fix); background: var(--fix-wash); } .conf.medium { color: var(--amber); background: var(--amber-wash); } .conf.low { color: var(--pencil); background: var(--pencil-wash); }
+.how-panel { margin-top: .7rem; padding-top: .7rem; border-top: 1px dashed var(--rule); cursor: default; }
+.how-panel[hidden] { display: none; }
+.how-panel ol { margin: 0 0 .6rem; padding-left: 1.2rem; font-size: .88rem; }
+.how-panel li { margin-bottom: .3rem; }
+.cands { overflow-x: auto; }
+.cands table { border-collapse: collapse; width: 100%; font-size: .82rem; font-variant-numeric: tabular-nums; }
+.cands th { text-align: right; color: var(--muted); font-weight: 500; padding: .25rem .4rem; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.cands th:first-child, .cands td:first-child { text-align: left; }
+.cands td { text-align: right; padding: .3rem .4rem; border-bottom: 1px solid var(--rule); }
+.cands tr.chosen td { background: var(--fix-wash); font-weight: 600; }
+.cands tr.chosen td:first-child::before { content: "✓ "; color: var(--fix); }
+.cands .tag { font-weight: 500; color: var(--muted); font-size: .75rem; }
+.cands-note { color: var(--muted); font-size: .8rem; margin: .4rem 0 0; }
+.empty { color: var(--muted); max-width: 44ch; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 1rem 1.1rem; }
 .empty strong { color: var(--fix); display: block; font-size: 1.05rem; margin-bottom: .3rem; }
-
+.sem-hint { color: var(--muted); font-size: .85rem; margin: .2rem 0 .9rem; }
 pre.tree { font: .82rem/1.5 var(--mono); margin: 0; white-space: pre; overflow-x: auto; font-variant-ligatures: none; }
 pre.tree[hidden], .tree-diagram[hidden] { display: none; }
 .tree-tools { display: flex; align-items: center; gap: .4rem; margin-bottom: .8rem; flex-wrap: wrap; }
@@ -104,118 +178,528 @@ pre.tree .ins { color: var(--fix); }
 .compare table { border-collapse: collapse; width: 100%; max-width: 30rem; }
 .compare td { padding: .45rem 0; border-bottom: 1px solid var(--rule); }
 .compare td:last-child { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.hint { padding: .6rem 1.25rem .9rem; color: var(--muted); font-size: .85rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.hint kbd { font: .78rem var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .3rem; background: var(--surface); }
 
-footer { padding: .7rem 1.5rem 1rem; color: var(--muted); font-size: .88rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
-footer kbd { font: .8rem var(--mono); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .3rem; }
-
-/* editor decorations */
 .rc-line { background: var(--pencil-wash); }
 .rc-glyph::before { content: ""; display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--pencil); margin: 7px 0 0 6px; }
+#scrim { display: none; }
+/* ---- compiler pipeline strip ---- */
+.pipeline { display: flex; align-items: stretch; gap: .35rem; padding: .7rem 1rem .1rem; overflow-x: auto; }
+.stage { flex: 1; min-width: 0; text-align: left; background: var(--sunken); border: 1px solid var(--rule); border-radius: 9px; padding: .4rem .6rem; cursor: pointer; display: flex; gap: .5rem; align-items: center; }
+.stage:hover { border-color: var(--muted); }
+.stage .ic { width: 1.35rem; height: 1.35rem; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 700; color: #fff; background: var(--muted); }
+.stage.ok .ic { background: var(--fix); } .stage.bad .ic { background: var(--pencil); } .stage.skip .ic { background: var(--rule); color: var(--muted); }
+.stage b { display: block; font-size: .85rem; line-height: 1.2; }
+.stage small { display: block; color: var(--muted); font-size: .74rem; line-height: 1.25; }
+.arrow { align-self: center; color: var(--muted); flex: none; }
+.tabs { overflow-x: auto; }
+.tabs button { white-space: nowrap; }
 
-@media (max-width: 860px) {
-  main { grid-template-columns: 1fr; grid-template-rows: 55vh auto; margin: 0 .75rem; }
-  .editor-wrap { border-right: 0; border-bottom: 1px solid var(--rule); }
-  header, footer { padding-left: .75rem; padding-right: .75rem; }
+/* ---- toast ---- */
+#toast { position: fixed; left: 50%; bottom: 1.5rem; transform: translate(-50%, 1rem); background: var(--ink); color: var(--surface); padding: .6rem 1rem; border-radius: 9px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; max-width: 90vw; box-shadow: 0 6px 24px rgba(0,0,0,.2); }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
+.icon-btn { min-width: 2.4rem; }
+/* ⋯ More menu */
+.more { position: relative; }
+.menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; min-width: 15rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: .35rem; box-shadow: 0 10px 30px rgba(15, 25, 40, .18); }
+.menu[hidden] { display: none; }
+.menu button { display: grid; grid-template-columns: 1.6rem 1fr; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-radius: 7px; padding: .45rem .55rem; cursor: pointer; color: var(--ink); }
+.menu button small { grid-column: 2; color: var(--muted); font-size: .76rem; line-height: 1.2; }
+.menu button:hover, .menu button:focus-visible { background: var(--sunken); outline: none; }
+.menu .mi { color: var(--muted); grid-row: span 2; align-self: start; padding-top: .05rem; }
+.menu .danger { color: var(--pencil); }
+.menu .danger .mi { color: var(--pencil); }
+.menu .sep { height: 1px; background: var(--rule); margin: .3rem .2rem; }
+
+/* ---- tokens ---- */
+.tok-summary { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .8rem; }
+.tok-summary button { font-size: .8rem; border-radius: 999px; padding: .15rem .65rem .15rem .4rem; border: 1px solid var(--rule); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; gap: .35rem; }
+.tok-summary button:hover { border-color: var(--ink); }
+.tok-summary button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); font-weight: 600; }
+.tok-summary .clear-hl { color: var(--muted); padding-left: .65rem; }
+#panel-tokens.hl-on .tk[data-i]:not(.hl) { opacity: .3; }
+#panel-tokens .tk.hl { box-shadow: 0 0 0 2px currentColor; }
+#panel-tokens .tk.picked { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* token highlights inside the editor */
+.ed-kw { background: rgba(106, 79, 196, .28); border-radius: 3px; }
+.ed-id { background: rgba(47, 111, 214, .22); border-radius: 3px; }
+.ed-num { background: rgba(47, 111, 214, .32); border-radius: 3px; }
+.ed-str { background: rgba(168, 106, 18, .28); border-radius: 3px; }
+.ed-op { background: rgba(93, 107, 122, .32); border-radius: 3px; }
+.ed-same { outline: 2px solid #2f6fd6; border-radius: 3px; }
+.tok-line { display: flex; gap: .35rem; align-items: baseline; margin-bottom: .35rem; flex-wrap: wrap; }
+.tok-line .ln { font: .75rem var(--mono); color: var(--muted); width: 2.2rem; text-align: right; flex: none; }
+.tk { font: .8rem var(--mono); border-radius: 5px; padding: .05rem .4rem; border: 1px solid var(--rule); background: var(--surface); cursor: pointer; white-space: pre; }
+.tk:hover { border-color: var(--ink); }
+.tk.kw { color: var(--violet); border-color: var(--violet-wash); background: var(--violet-wash); font-weight: 600; }
+.tk.id { color: var(--ink); }
+.tk.num { color: var(--focus); }
+.tk.str { color: var(--amber); background: var(--amber-wash); border-color: var(--amber-wash); }
+.tk.op { color: var(--muted); }
+.tk.ins { background: var(--fix); color: var(--surface); border-color: var(--fix); }
+.legend-dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .3rem; }
+
+/* ---- LL(1) trace ---- */
+.player { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; margin-bottom: .8rem; }
+.player .btn { padding: .25rem .6rem; }
+.player input[type=range] { flex: 1 1 100%; min-width: 120px; accent-color: var(--fix); order: 10; }
+.player .count { font: .8rem var(--mono); color: var(--muted); min-width: 7.5rem; text-align: right; }
+.step-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: .8rem .9rem; margin-bottom: .8rem; box-shadow: var(--shadow); }
+.step-action { font-size: 1.02rem; font-weight: 600; margin-bottom: .6rem; }
+.step-action .kind { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; border-radius: 4px; padding: .05rem .4rem; margin-right: .4rem; vertical-align: 2px; }
+.kind.expand { color: var(--violet); background: var(--violet-wash); } .kind.match { color: var(--fix); background: var(--fix-wash); }
+.kind.accept { color: #fff; background: var(--fix); } .kind.error { color: var(--pencil); background: var(--pencil-wash); }
+.lane-label { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: .5rem 0 .25rem; }
+.lane { display: flex; gap: .25rem; overflow-x: auto; padding-bottom: .25rem; align-items: center; }
+.sym { font: .78rem var(--mono); border-radius: 5px; padding: .15rem .45rem; border: 1px solid var(--rule); background: var(--sunken); white-space: nowrap; }
+.sym.t { border-color: var(--ink); background: var(--surface); font-weight: 500; }
+.sym.top { box-shadow: 0 0 0 2px var(--focus); }
+.sym.done { opacity: .35; }
+.sym.la { background: var(--focus); color: #fff; border-color: var(--focus); }
+.sym.ins { border-style: dashed; border-color: var(--fix); color: var(--fix); }
+.sym.more { border: 0; background: none; color: var(--muted); }
+.show-cell { background: none; border: 0; color: var(--focus); cursor: pointer; padding: 0; font-size: .85rem; text-decoration: underline; text-underline-offset: 3px; }
+.trace-table { width: 100%; border-collapse: collapse; font: .76rem var(--mono); }
+.trace-wrap { max-height: 320px; overflow: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.trace-table th { position: sticky; top: 0; background: var(--surface); text-align: left; color: var(--muted); font-weight: 500; padding: .3rem .5rem; border-bottom: 1px solid var(--rule); }
+.trace-table td { padding: .2rem .5rem; border-bottom: 1px solid var(--rule); white-space: nowrap; cursor: pointer; }
+.trace-table tr.cur td { background: var(--fix-wash); font-weight: 600; }
+.trace-table td.st { color: var(--muted); }
+.note-box { font-size: .85rem; color: var(--muted); margin: 0 0 .7rem; }
+.rc-trace { background: rgba(47, 111, 214, .22); border-radius: 2px; }
+
+/* ---- grammar ---- */
+.g-head { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; margin-bottom: .8rem; font-size: .85rem; color: var(--muted); }
+.g-head .ok { color: var(--fix); font-weight: 600; background: var(--fix-wash); border-radius: 4px; padding: .05rem .45rem; }
+/* shared: grammar views never use font ligatures, so != stays != (not a single glyph) */
+#panel-grammar, #panel-trace, #panel-tokens, .ptable, .prods, .ff { font-variant-ligatures: none; font-feature-settings: "liga" 0, "calt" 0; }
+.g-filter { flex: 1; min-width: 10rem; max-width: 16rem; font: inherit; font-size: .85rem; padding: .35rem .65rem; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.g-card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; }
+.g-empty { padding: 1rem; color: var(--muted); font-size: .9rem; }
+.tt { display: inline-block; font: .74rem/1.5 var(--mono); padding: 0 .38rem; border-radius: 4px; border: 1px solid var(--rule); background: var(--sunken); color: var(--ink); white-space: nowrap; }
+.tt.kw { color: var(--violet); background: var(--violet-wash); border-color: transparent; font-weight: 600; }
+.tt.cls { color: var(--focus); border-color: transparent; background: rgba(47, 111, 214, .09); font-weight: 600; }
+.tt.end { color: var(--muted); }
+.tt.eps { color: var(--amber); background: var(--amber-wash); border-color: transparent; font-weight: 600; }
+.ts { display: flex; flex-wrap: wrap; gap: .25rem; align-items: flex-start; align-content: flex-start; }
+/* productions */
+.prods { display: grid; grid-template-columns: max-content 1fr; }
+.prods .lhs { padding: .55rem .8rem; font: italic .82rem var(--mono); color: var(--violet); text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.prods .lhs::after { content: " →"; color: var(--muted); font-style: normal; }
+.prods .alts { padding: .45rem .8rem .45rem 0; border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: .3rem; }
+.prods .alt { display: flex; align-items: center; gap: .3rem; flex-wrap: wrap; }
+.prods .pn { font: .66rem var(--mono); color: var(--muted); min-width: 1.6rem; text-align: right; margin-right: .2rem; }
+.prods .ntr { font: italic .8rem var(--mono); color: var(--ink); }
+.prods .hl { background: var(--fix-wash); }
+.prods > div:nth-child(4n+3), .prods > div:nth-child(4n+4) { background: var(--sunken); }
+/* FIRST / FOLLOW: a table when there is room, stacked cards when the panel is narrow */
+.g-card { container-type: inline-size; }
+.ffh, .ffr { display: grid; grid-template-columns: 9rem minmax(0, 1fr) minmax(0, 1fr); gap: .8rem; padding: .5rem .8rem; border-bottom: 1px solid var(--rule); }
+.ffh { font-size: .7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.ffr:nth-child(odd) { background: var(--sunken); }
+.ffr .nt { font: italic .82rem var(--mono); color: var(--violet); display: flex; gap: .4rem; align-items: flex-start; flex-wrap: wrap; overflow-wrap: anywhere; }
+.ffr .lbl { display: none; font-size: .68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); width: 4rem; flex: none; padding-top: .1rem; }
+.ffr .set { display: flex; min-width: 0; align-items: flex-start; }
+.ffr .none { color: var(--muted); font-size: .8rem; }
+@container (max-width: 520px) {
+  .ffh { display: none; }
+  .ffr { grid-template-columns: minmax(0, 1fr); gap: .35rem; }
+  .ffr .lbl { display: block; }
+}
+.ff-legend { display: flex; gap: .8rem; flex-wrap: wrap; align-items: center; font-size: .78rem; color: var(--muted); margin: -.2rem 0 .7rem; }
+.ptable-wrap { overflow: auto; max-height: calc(100vh - 19rem); border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.ptable { border-collapse: separate; border-spacing: 0; font: .72rem var(--mono); }
+.ptable th, .ptable td { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); padding: .2rem .35rem; text-align: center; min-width: 1.8rem; }
+.ptable thead th { position: sticky; top: 0; background: var(--surface); z-index: 2; color: var(--fix); }
+.ptable tbody th { position: sticky; left: 0; background: var(--surface); z-index: 1; text-align: left; color: var(--violet); font-style: italic; font-weight: 400; white-space: nowrap; }
+.ptable thead th:first-child { left: 0; z-index: 3; }
+.ptable td.f { background: var(--fix-wash); cursor: help; }
+.ptable td.hit { background: var(--focus); color: #fff; font-weight: 700; outline: 2px solid var(--focus); }
+.ptable tr.hit-row th, .ptable th.hit-col { background: var(--violet-wash); }
+
+
+@media (max-width: 980px) {
+  body { grid-template-columns: minmax(0, 1fr); }
+  #sidebar { position: fixed; z-index: 20; top: 0; bottom: 0; left: 0; width: 280px; transform: translateX(-100%); transition: transform .2s; padding-top: env(safe-area-inset-top, 0px); }
+  body.side-open #sidebar { transform: none; }
+  body.side-open #scrim { display: block; position: fixed; inset: 0; z-index: 10; background: rgba(0, 0, 0, .35); }
+  #menu { display: inline-block; }
+  main { flex: none; grid-template-columns: minmax(0, 1fr); grid-template-rows: 55vh auto; margin: 0 .75rem; }
+  #workspace { height: auto; min-height: 100dvh; }
+  .editor-wrap { border-bottom: 1px solid var(--rule); }
+  #divider, #hide-history { display: none; }
+  aside { height: 75vh; }
+  .tabs { overflow-x: auto; }
+  .tabs button { white-space: nowrap; }
+  .topbar, .hint { padding-left: .75rem; padding-right: .75rem; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">ExplainParse<small>syntax errors that explain themselves</small></div>
-  <label>
-    <span class="visually-hidden" style="position:absolute;left:-9999px">Load an example</span>
+<nav id="sidebar" aria-label="Sessions">
+  <div class="brand"><b>ExplainParse</b><span>errors that explain themselves</span>
+    <button id="hide-history" title="Hide history" aria-label="Hide history">«</button></div>
+  <button id="new-session">+ New session</button>
+  <div class="side-label">History</div>
+  <ul id="sessions"></ul>
+  <div class="side-foot">Sessions are saved only in this browser. Your code never leaves your machine.</div>
+</nav>
+<div id="scrim"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="workspace">
+  <div class="topbar">
+    <button class="btn" id="menu" aria-label="Show history" title="Show history">☰</button>
+    <div class="langs" role="group" aria-label="Language" id="langs"></div>
     <select id="examples" aria-label="Load an example"><option value="">Load an example…</option></select>
-  </label>
-  <span class="spacer"></span>
-  <span class="tally" id="tally" aria-live="polite">Checking…</span>
-  <button class="btn" id="clear">Clear</button>
-  <button class="btn primary" id="fixall" disabled>Fix all</button>
-</header>
-
-<main>
-  <div class="editor-wrap">
-    <div id="editor" role="region" aria-label="Lumen source code"></div>
-    <div id="placeholder" aria-hidden="true">Type or paste your Lumen code here.
-Mistakes are explained as you type.
-
-For example:
-fn main() -> int {
-    let x: int = 5;
-    return x;
-}</div>
-  </div>
-  <aside>
-    <div class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-tab="errors">Errors</button>
-      <button role="tab" aria-selected="false" data-tab="tree">Parse tree</button>
-      <button role="tab" aria-selected="false" data-tab="compare">Compared with panic mode</button>
-    </div>
-    <div class="panel" id="panel-errors" role="tabpanel"></div>
-    <div class="panel" id="panel-tree" role="tabpanel" hidden>
-      <div class="tree-tools">
-        <div class="seg" role="group" aria-label="Tree view">
-          <button data-view="diagram" aria-pressed="true">Diagram</button>
-          <button data-view="text" aria-pressed="false">Text</button>
-        </div>
-        <button class="btn" id="expand-all">Expand all</button>
-        <button class="btn" id="collapse-all">Reset</button>
-        <span class="spacer"></span>
-        <button class="btn" id="zoom-out" aria-label="Zoom out">−</button>
-        <button class="btn" id="zoom-fit">Fit</button>
-        <button class="btn" id="zoom-in" aria-label="Zoom in">+</button>
+    <span class="spacer"></span>
+    <span class="tally" id="tally" aria-live="polite">Checking…</span>
+    <button class="btn" id="breakit" title="Inject a realistic mistake and see if ExplainParse finds it">🎲 Break it</button>
+    <button class="btn primary" id="fixall" disabled>Fix all</button>
+    <div class="more">
+      <button class="btn" id="more-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="more-menu">⋯ More</button>
+      <div class="menu" id="more-menu" role="menu" aria-labelledby="more-btn" hidden>
+        <button role="menuitem" id="share"><span class="mi">🔗</span>Copy share link<small>Opens this program for anyone</small></button>
+        <button role="menuitem" id="theme"><span class="mi">◐</span><span id="theme-label">Dark theme</span></button>
+        <button role="menuitem" id="toggle-history"><span class="mi">☰</span><span id="history-label">Hide history</span></button>
+        <div class="sep" role="separator"></div>
+        <button role="menuitem" id="clear" class="danger"><span class="mi">✕</span>Clear code<small>Ctrl+Z brings it back</small></button>
       </div>
-      <div class="tree-diagram" id="tree-diagram"></div>
-      <p class="tree-legend" id="tree-legend">Click a grammar rule to expand or collapse it (<b>+N</b> = tokens hidden inside). Dark-outlined boxes are tokens from your code;<span style="background:var(--fix)"></span>filled boxes were inserted by a fix, and collapsed rules hiding one get a green outline. <b>›</b> joins rules with a single child, and recursive lists such as <code>stmt_list</code> are drawn as one row.</p>
-      <pre class="tree" id="tree" hidden></pre>
     </div>
-    <div class="panel" id="panel-compare" role="tabpanel" hidden>
-      <p class="empty" style="max-width:52ch">Classic panic-mode recovery skips tokens until it can resynchronise, and often reports one mistake several times. ExplainParse searches for the smallest repair, so each mistake is reported once.</p>
-      <div class="compare"><table>
-        <tr><td>Errors reported by panic mode</td><td id="cmp-base">–</td></tr>
-        <tr><td>Errors reported by ExplainParse</td><td id="cmp-ours">–</td></tr>
-        <tr><td>Follow-on errors avoided</td><td id="cmp-saved">–</td></tr>
-      </table></div>
-    </div>
-  </aside>
-</main>
+  </div>
 
-<footer>
-  <span>Lumen: a small typed language with functions, <code>let</code>, <code>if/else</code> and <code>while</code>.</span>
-  <span>Click a note to jump to it. <kbd>Ctrl</kbd>+<kbd>.</kbd> in the editor shows quick fixes.</span>
-</footer>
+  <main>
+    <div class="editor-wrap">
+      <div id="editor" role="region" aria-label="Source code"></div>
+      <div id="placeholder" aria-hidden="true"></div>
+    </div>
+    <div id="divider" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="Resize the code and parser panels (arrow keys, double-click to reset)" title="Drag to resize · double-click to reset">
+      <button id="grow-left" aria-label="Make the code wider" title="Wider code">▶</button>
+      <span class="grip"></span>
+      <button id="grow-right" aria-label="Make the parser panel wider" title="Wider parser panel">◀</button>
+    </div>
+    <aside>
+      <div class="pipeline" id="pipeline" aria-label="Compiler phases"></div>
+      <div class="tabs" role="tablist">
+        <button role="tab" aria-selected="true" data-tab="errors">Errors</button>
+        <button role="tab" aria-selected="false" data-tab="tokens">Tokens</button>
+        <button role="tab" aria-selected="false" data-tab="trace">LL(1) trace</button>
+        <button role="tab" aria-selected="false" data-tab="tree">Parse tree</button>
+        <button role="tab" aria-selected="false" data-tab="grammar">Grammar</button>
+        <button role="tab" aria-selected="false" data-tab="compare">vs panic mode</button>
+      </div>
+      <div class="panel" id="panel-tokens" role="tabpanel" hidden></div>
+      <div class="panel" id="panel-trace" role="tabpanel" hidden></div>
+      <div class="panel" id="panel-grammar" role="tabpanel" hidden></div>
+      <div class="panel" id="panel-errors" role="tabpanel"></div>
+      <div class="panel" id="panel-tree" role="tabpanel" hidden>
+        <div class="tree-tools">
+          <div class="seg" role="group" aria-label="Tree view">
+            <button data-view="diagram" aria-pressed="true">Diagram</button>
+            <button data-view="text" aria-pressed="false">Text</button>
+          </div>
+          <button class="btn" id="expand-all">Expand all</button>
+          <button class="btn" id="collapse-all">Reset</button>
+          <span class="spacer"></span>
+          <button class="btn" id="zoom-out" aria-label="Zoom out">−</button>
+          <button class="btn" id="zoom-fit">Fit</button>
+          <button class="btn" id="zoom-in" aria-label="Zoom in">+</button>
+        </div>
+        <div class="tree-diagram" id="tree-diagram"></div>
+        <p class="tree-legend" id="tree-legend">Click a grammar rule to expand or collapse it (<b>+N</b> = tokens hidden inside). Dark-outlined boxes are tokens from your code;<span style="background:var(--fix)"></span>filled boxes were inserted by a fix, and collapsed rules hiding one get a green outline. <b>›</b> joins rules with a single child, and recursive lists such as <code>stmt_list</code> are drawn as one row.</p>
+        <pre class="tree" id="tree" hidden></pre>
+      </div>
+      <div class="panel" id="panel-compare" role="tabpanel" hidden>
+        <p class="empty" style="max-width:52ch">Classic panic-mode recovery skips tokens until it can resynchronise, and often reports one mistake several times. ExplainParse searches for the smallest repair, so each mistake is reported once. Only syntax errors are counted here.</p>
+        <div class="compare"><table>
+          <tr><td>Errors reported by panic mode</td><td id="cmp-base">–</td></tr>
+          <tr><td>Errors reported by ExplainParse</td><td id="cmp-ours">–</td></tr>
+          <tr><td>Follow-on errors avoided</td><td id="cmp-saved">–</td></tr>
+        </table></div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="hint">
+    <span>Syntax errors are fixed first; type and name checks run once the program parses.</span>
+    <span><kbd>Ctrl</kbd>+<kbd>.</kbd> in the editor shows quick fixes.</span>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
 <script>
 const API = (window.EXPLAINPARSE_API || "") + "/api";
-const START = "";
+// Highlighting data is kept here so the editor works before the checker has loaded.
+const LANGS = {
+  lumen: { name: "Lumen", keywords: ["fn", "let", "if", "else", "while", "return", "true", "false"], types: ["int", "bool", "str"],
+    placeholder: "fn main() -> int {\n    let x: int = 5;\n    return x;\n}", fn: /\bfn\s+([A-Za-z_]\w*)/g },
+  minic: { name: "Mini-C", keywords: ["if", "else", "while", "return", "true", "false"], types: ["int", "bool", "void"],
+    placeholder: "int main() {\n    int x = 5;\n    return x;\n}", fn: /\b(?:int|bool|void)\s+([A-Za-z_]\w*)\s*\(/g },
+  minijava: { name: "Mini-Java", keywords: ["class", "public", "private", "static", "if", "else", "while", "return", "true", "false"],
+    types: ["int", "boolean", "String", "void"],
+    placeholder: "class Main {\n    static int main() {\n        int x = 5;\n        return x;\n    }\n}", fn: /\b(?:int|boolean|String|void)(?:\[\])?\s+([A-Za-z_]\w*)\s*\(/g },
+};
+const PHASE = { lexer: "Lexical", parser: "Syntax", semantic: "Semantic" };
+
 let editor, model, last = null, timer = null, decorations = [];
-let engine = null, enginePromise = null;
+let engine = null, enginePromise = null, examplesList = [];
+let lang = "lumen";
+const openHow = new Set();      // which "How did it decide?" panels are open, kept while typing
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const code = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function isDark() {
   const t = document.documentElement.dataset.theme;
   return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
+// ---- sessions (localStorage) -------------------------------------------
+const STORE = "explainparse.sessions.v1", CURRENT = "explainparse.current.v1";
+let sessions = [], current = null, saveTimer = null;
+
+function loadSessions() {
+  try { sessions = JSON.parse(localStorage.getItem(STORE) || "[]"); } catch { sessions = []; }
+  if (!Array.isArray(sessions)) sessions = [];
+  let id = null;
+  try { id = localStorage.getItem(CURRENT); } catch {}
+  current = sessions.find((s) => s.id === id) || sessions[0] || null;
+}
+function persist() {
+  try {
+    localStorage.setItem(STORE, JSON.stringify(sessions.slice(0, 100)));
+    if (current) localStorage.setItem(CURRENT, current.id);
+  } catch {}
+}
+function titleFor(src, l) {
+  const names = [...src.matchAll(LANGS[l].fn)].map((m) => m[1]);
+  const pick = names.find((n) => n !== "main") || names[0];
+  if (pick) return names.length > 1 ? `${pick} + ${names.length - 1} more` : pick;
+  const first = src.split("\n").map((x) => x.trim()).find((x) => x && !x.startsWith("//"));
+  return first ? first.slice(0, 40) : "Untitled";
+}
+function ago(t) {
+  const s = Math.round((Date.now() - t) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.round(s / 60)} min ago`;
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
+  return new Date(t).toLocaleDateString();
+}
+function newSession(l = lang, source = "") {
+  const s = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), lang: l, source,
+    title: source ? titleFor(source, l) : "Untitled", updated: Date.now(), errors: null };
+  sessions.unshift(s);
+  current = s;
+  persist();
+  return s;
+}
+function renderSessions() {
+  $("sessions").innerHTML = sessions.map((s) => `
+    <li class="${current && s.id === current.id ? "current" : ""}">
+      <button class="open" data-id="${s.id}">
+        <span class="t">${esc(s.title || "Untitled")}</span>
+        <span class="m"><span class="badge">${esc(LANGS[s.lang] ? LANGS[s.lang].name : s.lang)}</span>
+          ${s.errors == null ? "" : `<span class="dot ${s.errors ? "bad" : ""}"></span>${s.errors ? `${s.errors} error${s.errors > 1 ? "s" : ""}` : "ok"}`}
+          <span>· ${ago(s.updated)}</span></span>
+      </button>
+      <button class="del" data-id="${s.id}" aria-label="Delete session ${esc(s.title || "Untitled")}">×</button>
+    </li>`).join("");
+}
+function saveCurrent() {
+  if (!current || !model) return;
+  const src = model.getValue();
+  if (src === current.source && current.lang === lang) return;
+  current.source = src;
+  current.lang = lang;
+  current.title = src.trim() ? titleFor(src, lang) : "Untitled";
+  current.updated = Date.now();
+  sessions = [current, ...sessions.filter((s) => s !== current)];
+  persist();
+  renderSessions();
+}
+function openSession(s) {
+  saveCurrent();
+  current = s;
+  persist();
+  setLang(s.lang, false);
+  if (model) { editor.setValue(s.source); editor.focus(); }
+  renderSessions();
+  document.body.classList.remove("side-open");
+}
+$("new-session").addEventListener("click", () => {
+  saveCurrent();
+  const blank = sessions.find((s) => !s.source.trim() && s !== current);
+  if (current && !current.source.trim()) { editor && editor.focus(); document.body.classList.remove("side-open"); return; }
+  if (blank) { openSession(blank); return; }
+  newSession(lang);
+  if (model) editor.setValue("");
+  $("examples").value = "";
+  renderSessions();
+  document.body.classList.remove("side-open");
+  editor && editor.focus();
+});
+$("sessions").addEventListener("click", (ev) => {
+  const del = ev.target.closest(".del");
+  if (del) {
+    const s = sessions.find((x) => x.id === del.dataset.id);
+    if (!s || (s.source.trim() && !confirm(`Delete "${s.title}"?`))) return;
+    sessions = sessions.filter((x) => x !== s);
+    if (s === current) {
+      current = sessions[0] || newSession(lang);
+      setLang(current.lang, false);
+      if (model) editor.setValue(current.source);
+    }
+    persist();
+    renderSessions();
+    return;
+  }
+  const open = ev.target.closest(".open");
+  if (open) { const s = sessions.find((x) => x.id === open.dataset.id); if (s && s !== current) openSession(s); }
+});
+const desktop = () => matchMedia("(min-width: 981px)").matches;
+function setHistoryHidden(hide) {
+  document.body.classList.toggle("side-hidden", hide);
+  updateHistoryLabel();
+  try { localStorage.setItem("explainparse.sideHidden", hide ? "1" : ""); } catch {}
+}
+$("menu").addEventListener("click", () => {
+  if (desktop()) setHistoryHidden(false);
+  else document.body.classList.toggle("side-open");
+});
+function updateHistoryLabel() {
+  $("history-label").textContent = desktop() && !document.body.classList.contains("side-hidden") ? "Hide history" : "Show history";
+}
+matchMedia("(min-width: 981px)").addEventListener("change", updateHistoryLabel);
+updateHistoryLabel();
+$("hide-history").addEventListener("click", () => setHistoryHidden(true));
+$("toggle-history").addEventListener("click", () => {
+  if (desktop()) setHistoryHidden(!document.body.classList.contains("side-hidden"));
+  else document.body.classList.add("side-open");
+});
+try { if (localStorage.getItem("explainparse.sideHidden")) setHistoryHidden(true); } catch {}
+$("scrim").addEventListener("click", () => document.body.classList.remove("side-open"));
+setInterval(renderSessions, 60000);
+
+// ---- resizable split between the code and the parser panel -----------------------
+const SPLIT_KEY = "explainparse.split", SPLIT_DEFAULT = 56;
+let split = SPLIT_DEFAULT;
+function setSplit(pct, save = true) {
+  split = Math.min(80, Math.max(22, pct));
+  document.querySelector("main").style.setProperty("--split", split + "%");
+  $("divider").setAttribute("aria-valuenow", Math.round(split));
+  if (save) try { localStorage.setItem(SPLIT_KEY, String(split)); } catch {}
+  if (typeof drawTree === "function" && !$("panel-tree").hidden) drawTree();
+}
+try { const v = parseFloat(localStorage.getItem(SPLIT_KEY)); if (v) setSplit(v, false); } catch {}
+(function () {
+  const div = $("divider"), main = document.querySelector("main");
+  let dragging = false;
+  const move = (x) => {
+    const r = main.getBoundingClientRect();
+    setSplit(((x - r.left) / r.width) * 100, false);
+  };
+  div.addEventListener("pointerdown", (ev) => {
+    if (ev.target.closest("button")) return;
+    dragging = true;
+    div.setPointerCapture(ev.pointerId);
+    div.classList.add("dragging");
+    document.body.classList.add("resizing");
+  });
+  div.addEventListener("pointermove", (ev) => { if (dragging) move(ev.clientX); });
+  const end = () => {
+    if (!dragging) return;
+    dragging = false;
+    div.classList.remove("dragging");
+    document.body.classList.remove("resizing");
+    setSplit(split);
+  };
+  div.addEventListener("pointerup", end);
+  div.addEventListener("pointercancel", end);
+  div.addEventListener("dblclick", (ev) => { if (!ev.target.closest("button")) setSplit(SPLIT_DEFAULT); });
+  div.addEventListener("keydown", (ev) => {
+    if (ev.key === "ArrowLeft") { setSplit(split - 4); ev.preventDefault(); }
+    if (ev.key === "ArrowRight") { setSplit(split + 4); ev.preventDefault(); }
+    if (ev.key === "Home") setSplit(SPLIT_DEFAULT);
+  });
+  $("grow-left").addEventListener("click", () => setSplit(split + 10));
+  $("grow-right").addEventListener("click", () => setSplit(split - 10));
+})();
+
+// ---- language switch -----------------------------------------------------
+$("langs").innerHTML = Object.entries(LANGS).map(([id, l]) =>
+  `<button data-lang="${id}" aria-pressed="${id === lang}">${l.name}</button>`).join("");
+$("langs").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button");
+  if (!b || b.dataset.lang === lang) return;
+  // code is tied to its language: switching with code on screen starts a new session
+  if (model && model.getValue().trim()) {
+    saveCurrent();
+    const blank = sessions.find((s) => !s.source.trim() && s !== current);
+    if (blank) { blank.lang = b.dataset.lang; openSession(blank); return; }
+    newSession(b.dataset.lang);
+    setLang(b.dataset.lang, false);
+    editor.setValue("");
+    renderSessions();
+    return;
+  }
+  setLang(b.dataset.lang, true);
+  saveCurrent();
+});
+function setLang(l, recheck) {
+  if (!LANGS[l]) l = "lumen";
+  lang = l;
+  document.querySelectorAll("#langs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.lang === l));
+  $("placeholder").textContent = `Type or paste your ${LANGS[l].name} code here.\nMistakes are explained as you type.\n\nFor example:\n${LANGS[l].placeholder}`;
+  if (model) monaco.editor.setModelLanguage(model, l);
+  fillExamples();
+  if (recheck && model) check();
+}
+function fillExamples() {
+  const sel = $("examples");
+  sel.length = 1;
+  examplesList.filter((ex) => (ex.lang || "lumen") === lang).forEach((ex) => sel.add(new Option(ex.title, ex.name)));
+  sel.value = "";
+}
+$("examples").addEventListener("change", () => {
+  const ex = examplesList.find((x) => x.name === $("examples").value);
+  if (!ex || !editor) return;
+  if (current && current.source.trim() && current.source !== ex.source) { saveCurrent(); newSession(lang); renderSessions(); }
+  editor.setValue(ex.source);
+});
+
+// ---- editor ----------------------------------------------------------------
 require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs" } });
 require(["vs/editor/editor.main"], () => {
-  monaco.languages.register({ id: "lumen" });
-  monaco.languages.setMonarchTokensProvider("lumen", {
-    keywords: ["fn", "let", "if", "else", "while", "return", "true", "false"],
-    types: ["int", "bool", "str"],
-    tokenizer: { root: [
-      [/\/\/.*$/, "comment"], [/\/\*/, "comment", "@comment"],
-      [/"([^"\\]|\\.)*"?/, "string"],
-      [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@types": "type", "@default": "identifier" } }],
-      [/\d+/, "number"], [/[{}()]/, "delimiter.bracket"], [/[-+*\/%<>=!&|:;,]+/, "operator"],
-    ], comment: [[/\*\//, "comment", "@pop"], [/./, "comment"]] },
-  });
+  for (const [id, l] of Object.entries(LANGS)) {
+    monaco.languages.register({ id });
+    monaco.languages.setMonarchTokensProvider(id, {
+      keywords: l.keywords, types: l.types,
+      tokenizer: { root: [
+        [/\/\/.*$/, "comment"], [/\/\*/, "comment", "@comment"],
+        [/"([^"\\]|\\.)*"?/, "string"],
+        [/[a-zA-Z_]\w*/, { cases: { "@keywords": "keyword", "@types": "type", "@default": "identifier" } }],
+        [/\d+/, "number"], [/[{}()\[\]]/, "delimiter.bracket"], [/[-+*\/%<>=!&|:;,.]+/, "operator"],
+      ], comment: [[/\*\//, "comment", "@pop"], [/./, "comment"]] },
+    });
+    monaco.languages.registerCodeActionProvider(id, {
+      provideCodeActions(m, range, context) {
+        if (!last) return { actions: [], dispose() {} };
+        const actions = last.diagnostics
+          .filter((d) => d.fix && context.markers.some((mk) => mk.startLineNumber === d.line))
+          .map((d) => ({ title: `Fix: ${d.fix.description}`, kind: "quickfix", isPreferred: d.confidence === "high",
+            edit: { edits: d.fix.edits.map((e) => ({ resource: m.uri, versionId: undefined,
+              textEdit: { range: rangeOf(e.start, e.end), text: e.text } })) } }));
+        return { actions, dispose() {} };
+      },
+    });
+  }
   monaco.editor.defineTheme("ep-light", { base: "vs", inherit: true, rules: [
-    { token: "keyword", foreground: "1b2430", fontStyle: "bold" }, { token: "type", foreground: "127c7a" },
+    { token: "keyword", foreground: "18212c", fontStyle: "bold" }, { token: "type", foreground: "127c7a" },
     { token: "string", foreground: "8a4f12" }, { token: "number", foreground: "2f6fd6" },
     { token: "comment", foreground: "8795a3", fontStyle: "italic" } ],
     colors: { "editor.background": "#ffffff", "editorLineNumber.foreground": "#a6b1bc", "editorError.foreground": "#c8323c" } });
@@ -223,10 +707,10 @@ require(["vs/editor/editor.main"], () => {
     { token: "keyword", foreground: "e3e9ef", fontStyle: "bold" }, { token: "type", foreground: "4fc2bf" },
     { token: "string", foreground: "e0a64b" }, { token: "number", foreground: "8fb4ff" },
     { token: "comment", foreground: "6c7b8a", fontStyle: "italic" } ],
-    colors: { "editor.background": "#1c242d", "editorLineNumber.foreground": "#56636f", "editorError.foreground": "#f06a72" } });
+    colors: { "editor.background": "#19212a", "editorLineNumber.foreground": "#56636f", "editorError.foreground": "#f06a72" } });
 
   editor = monaco.editor.create($("editor"), {
-    value: START, language: "lumen", theme: isDark() ? "ep-dark" : "ep-light",
+    value: current ? current.source : "", language: lang, theme: isDark() ? "ep-dark" : "ep-light",
     fontFamily: "JetBrains Mono, ui-monospace, Consolas, monospace", fontSize: 14, lineHeight: 22,
     minimap: { enabled: false }, glyphMargin: true, automaticLayout: true, scrollBeyondLastLine: false,
     renderLineHighlight: "none", padding: { top: 14 }, tabSize: 4,
@@ -235,21 +719,13 @@ require(["vs/editor/editor.main"], () => {
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () =>
     monaco.editor.setTheme(isDark() ? "ep-dark" : "ep-light"));
   const syncPlaceholder = () => { $("placeholder").hidden = model.getValueLength() > 0; };
-  model.onDidChangeContent(() => { syncPlaceholder(); clearTimeout(timer); timer = setTimeout(check, 300); });
+  model.onDidChangeContent(() => {
+    syncPlaceholder();
+    clearTimeout(timer); timer = setTimeout(check, 300);
+    clearTimeout(saveTimer); saveTimer = setTimeout(saveCurrent, 600);
+  });
   syncPlaceholder();
   editor.focus();
-
-  monaco.languages.registerCodeActionProvider("lumen", {
-    provideCodeActions(m, range, context) {
-      if (!last) return { actions: [], dispose() {} };
-      const actions = last.diagnostics
-        .filter((d) => d.fix && context.markers.some((mk) => mk.startLineNumber === d.line))
-        .map((d) => ({ title: `Fix: ${d.fix.description}`, kind: "quickfix", isPreferred: d.confidence === "high",
-          edit: { edits: d.fix.edits.map((e) => ({ resource: m.uri, versionId: undefined,
-            textEdit: { range: rangeOf(e.start, e.end), text: e.text } })) } }));
-      return { actions, dispose() {} };
-    },
-  });
   check();
 });
 
@@ -258,9 +734,13 @@ function rangeOf(start, end) {
   return new monaco.Range(a.lineNumber, a.column, b.lineNumber, b.column);
 }
 
-// Two ways to run the checker: the local Python server (python -m explainparse.server), or
-// in the browser itself via Pyodide (used on GitHub Pages, where there is no server).
-
+// ---- checker: local Python server, or Python in the browser via Pyodide (GitHub Pages) ----
+async function post(path, body) {
+  const r = await fetch(`${API}/${path}`, { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body) });
+  if (!r.ok) throw new Error(`server answered ${r.status}`);
+  return r.json();
+}
 
 async function serverEngine() {
   const ctl = new AbortController();
@@ -270,16 +750,16 @@ async function serverEngine() {
     if (!r.ok) return null;
   } catch { return null; } finally { clearTimeout(t); }
   return {
-    analyze: async (source) => {
+    analyze: async (source, l) => {
       const r = await fetch(`${API}/analyze`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source }) });
+        body: JSON.stringify({ source, lang: l }) });
       if (!r.ok) throw new Error(`server answered ${r.status}`);
       return r.json();
     },
-    examples: async () => {
-      const r = await fetch(`${API}/examples`);
-      return r.json();
-    },
+    meta: async () => (await fetch(`${API}/meta`)).json(),
+    grammar: async (l) => (await fetch(`${API}/grammar?lang=${l}`)).json(),
+    trace: async (source, l) => post("trace", { source, lang: l }),
+    breakIt: async (source, l, seed) => post("break", { source, lang: l, seed }),
   };
 }
 
@@ -296,11 +776,18 @@ async function browserEngine() {
   for (const [name, src] of Object.entries(bundle.files)) py.FS.writeFile(`/home/pyodide/explainparse/${name}`, src);
   py.runPython("import sys, json; sys.path.insert(0, '/home/pyodide'); import explainparse");
   return {
-    analyze: async (source) => {
+    analyze: async (source, l) => {
       py.globals.set("SOURCE", source);
-      return JSON.parse(py.runPython("json.dumps(explainparse.analyze(SOURCE).to_dict())"));
+      py.globals.set("LANG", l);
+      return JSON.parse(py.runPython("json.dumps(explainparse.analyze(SOURCE, LANG).to_dict())"));
     },
-    examples: async () => bundle.examples,
+    meta: async () => bundle.meta,
+    grammar: async (l) => { py.globals.set("LANG", l);
+      return JSON.parse(py.runPython("import explainparse.extras as X; json.dumps(X.grammar_info(LANG))")); },
+    trace: async (source, l) => { py.globals.set("SOURCE", source); py.globals.set("LANG", l);
+      return JSON.parse(py.runPython("import explainparse.extras as X; json.dumps(X.trace(SOURCE, LANG))")); },
+    breakIt: async (source, l, seed) => { py.globals.set("SOURCE", source); py.globals.set("LANG", l); py.globals.set("SEED", seed);
+      return JSON.parse(py.runPython("import explainparse.extras as X; json.dumps(X.break_program(SOURCE, LANG, SEED))")); },
   };
 }
 
@@ -313,17 +800,36 @@ function getEngine() {
 }
 
 async function check() {
-  const source = model.getValue();
+  if (!model) return;
+  const source = model.getValue(), l = lang;
   try {
     const eng = await getEngine();
-    const result = await eng.analyze(source);
-    if (model.getValue() !== source) return;   // user kept typing; a newer check is coming
+    const result = await eng.analyze(source, l);
+    if (model.getValue() !== source || lang !== l) return;   // a newer check is coming
     last = result;
     render();
+    if (current) {
+      const n = source.trim() ? result.diagnostics.length : null;
+      if (current.errors !== n) { current.errors = n; persist(); renderSessions(); }
+    }
   } catch (err) {
     console.error(err);
     $("tally").innerHTML = `<strong>The checker couldn't start.</strong> Run <code>python -m explainparse.server</code> and open the page it prints.`;
   }
+}
+
+function howPanel(d, key) {
+  const dec = d.decision;
+  if (!dec) return "";
+  const rows = (dec.candidates || []).map((r) => `<tr class="${r.chosen ? "chosen" : ""}">
+      <td>${esc(cap(r.fix))}${r.moved ? ` <span class="tag">(best score, moved)</span>` : ""}${r.lookahead ? ` <span class="tag">(2-edit lookahead)</span>` : ""}</td>
+      <td>${r.progress}</td><td>${r.cost}</td><td>${r.distance}</td><td>${r.adjust > 0 ? "+" : ""}${r.adjust}</td><td>${r.score}</td></tr>`).join("");
+  const table = rows ? `<div class="cands"><table>
+      <thead><tr><th>Candidate fix</th><th>Parsed</th><th>Cost</th><th>Distance</th><th>Other</th><th>Score</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+      <p class="cands-note">Parsed: tokens the parser got through after the edit (max 6). Score = 3 × Parsed − Cost − Distance + Other. Equivalent fixes are shown once.</p>` : "";
+  return `<div class="how-panel" ${openHow.has(key) ? "" : "hidden"}>
+      <ol>${dec.steps.map((s) => `<li>${code(s)}</li>`).join("")}</ol>${table}</div>`;
 }
 
 function render() {
@@ -332,7 +838,8 @@ function render() {
   monaco.editor.setModelMarkers(model, "explainparse", ds.map((d) => {
     const lab = d.labels.find((l) => l.primary) || d.labels[0];
     const ln = Math.min(lab.line, lines);
-    return { severity: monaco.MarkerSeverity.Error, message: `${d.title}\n\n${d.why}`, code: d.code,
+    return { severity: d.phase === "semantic" ? monaco.MarkerSeverity.Warning : monaco.MarkerSeverity.Error,
+      message: `${d.title}\n\n${d.why}`, code: d.code,
       startLineNumber: ln, startColumn: lab.col, endLineNumber: ln, endColumn: lab.col + Math.max(lab.length, 1) };
   }));
   decorations = editor.deltaDecorations(decorations, ds.filter((d) => d.root_cause).map((d) => {
@@ -342,35 +849,46 @@ function render() {
         glyphMarginHoverMessage: { value: `Root cause: ${d.root_cause.note}` } } };
   }));
 
-  const n = ds.length;
+  const n = ds.length, sem = last.semantic_errors || 0, syn = n - sem;
+  const empty = model.getValue().trim() === "";
   $("tally").className = "tally" + (n ? "" : " clean");
-  $("tally").innerHTML = n ? `<strong>${n} error${n > 1 ? "s" : ""}</strong>`
-    : model.getValue().trim() === "" ? "Ready" : `<strong>No errors</strong>`;
-  $("fixall").disabled = !n;
+  $("tally").innerHTML = n ? `<strong>${n} error${n > 1 ? "s" : ""}</strong>` +
+      (sem && syn ? ` · ${syn} syntax, ${sem} semantic` : sem ? " · type and name checks" : "")
+    : empty ? "Ready" : `<strong>No errors</strong>`;
+  $("fixall").disabled = !ds.some((d) => d.fix) || last.fixed_source === model.getValue();
 
-  $("panel-errors").innerHTML = n ? ds.map((d, i) => `
+  $("panel-errors").innerHTML = n ? (syn && !sem ? `<p class="sem-hint">Type and name checks will run once these syntax errors are fixed.</p>` : "") +
+    ds.map((d, i) => {
+      const key = `${d.code}:${d.line}:${d.col}`;
+      return `
     <article class="note ${d.phase}" data-i="${i}" tabindex="0">
-      <div class="where">line ${d.line}, column ${d.col} · ${d.code}</div>
+      <div class="note-head"><span class="chip ${d.phase}">${PHASE[d.phase] || d.phase}</span>
+        <span class="where">line ${d.line}, col ${d.col} · ${d.code}</span>
+        ${d.fix ? `<span class="conf ${d.confidence}">${d.confidence} confidence</span>` : ""}</div>
       <h3>${code(d.title)}</h3>
       <p>${code(d.why)}</p>
       ${d.root_cause ? `<p class="root"><b>Root cause, line ${d.root_cause.line}:</b> ${code(d.root_cause.note)}</p>` : ""}
       ${d.alternative ? `<p class="alt">Another possibility: ${code(d.alternative)}</p>` : ""}
-      ${d.fix ? `<div class="actions"><button class="apply" data-i="${i}">${esc(cap(d.fix.description))}</button>
-        <span class="conf ${d.confidence}">${d.confidence} confidence</span></div>` : ""}
-    </article>`).join("")
-    : model.getValue().trim() === ""
-    ? `<div class="empty"><strong>Waiting for your code.</strong>Write a Lumen program on the left, or pick one from <em>Load an example</em>. Every mistake will be explained here.</div>`
-    : `<div class="empty"><strong>No syntax errors.</strong>Break something on purpose to see how each mistake gets explained: delete a <code>}</code>, misspell <code>while</code>, or drop a <code>;</code>.</div>`;
+      <div class="actions">
+        ${d.fix ? `<button class="apply" data-i="${i}">${esc(cap(d.fix.description))}</button>` : ""}
+        ${d.decision ? `<button class="how" data-key="${esc(key)}" aria-expanded="${openHow.has(key)}">How did it decide?</button>` : ""}
+      </div>
+      ${howPanel(d, key)}
+    </article>`; }).join("")
+    : empty
+    ? `<div class="empty"><strong>Waiting for your code.</strong>Write a ${LANGS[lang].name} program on the left, or pick one from <em>Load an example</em>. Every mistake will be explained here.</div>`
+    : `<div class="empty"><strong>No errors.</strong>The program parses and passes the type and name checks. Break something on purpose to see how each mistake gets explained: delete a <code>}</code>, misspell <code>while</code>, or use a variable you never declared.</div>`;
 
   $("tree").innerHTML = last.tree ? treeText(last.tree, "") : "The parse tree appears once the program can be repaired.";
   if (!$("panel-tree").hidden && treeView === "diagram") drawTree();
+  renderPipeline();
+  if (!$("panel-tokens").hidden) renderTokens();
+  if (!$("panel-trace").hidden) loadTrace();
   const ours = last.explainparse_errors, base = last.baseline_errors;
   $("cmp-base").textContent = base;
   $("cmp-ours").textContent = ours;
   $("cmp-saved").textContent = Math.max(base - ours, 0);
 }
-
-const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function treeText(node, indent) {
   if (node.lexeme !== undefined) {
@@ -504,6 +1022,16 @@ function applyFix(i) {
 $("panel-errors").addEventListener("click", (ev) => {
   const btn = ev.target.closest(".apply");
   if (btn) { applyFix(+btn.dataset.i); return; }
+  const how = ev.target.closest(".how");
+  if (how) {
+    const key = how.dataset.key, panel = how.closest(".note").querySelector(".how-panel");
+    const open = panel.hidden;
+    panel.hidden = !open;
+    how.setAttribute("aria-expanded", open);
+    open ? openHow.add(key) : openHow.delete(key);
+    return;
+  }
+  if (ev.target.closest(".how-panel")) return;
   const note = ev.target.closest(".note");
   if (!note) return;
   const d = last.diagnostics[+note.dataset.i];
@@ -533,17 +1061,419 @@ $("fixall").addEventListener("click", () => {
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
   document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
-  ["errors", "tree", "compare"].forEach((t) => { $(`panel-${t}`).hidden = t !== b.dataset.tab; });
-  if (b.dataset.tab === "tree" && treeView === "diagram") drawTree();
+  showTab(b.dataset.tab, false);
 }));
 
-getEngine().then((eng) => eng.examples()).then((list) => {
-  const sel = $("examples");
-  list.forEach((ex) => sel.add(new Option(ex.title, ex.name)));
-  sel.addEventListener("change", () => {
-    const ex = list.find((x) => x.name === sel.value);
-    if (ex && editor) editor.setValue(ex.source);
+// ---- tabs ----------------------------------------------------------------------
+const TABS = ["errors", "tokens", "trace", "tree", "grammar", "compare"];
+function showTab(tab, focus) {
+  document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x.dataset.tab === tab));
+  TABS.forEach((t) => { $(`panel-${t}`).hidden = t !== tab; });
+  if (tab === "tree" && treeView === "diagram") drawTree();
+  if (tab === "tokens") renderTokens();
+  if (tab === "trace") loadTrace();
+  if (tab === "grammar") loadGrammar();
+  if (tab !== "trace") traceDeco = editor ? editor.deltaDecorations(traceDeco, []) : [];
+  if (tab !== "tokens") tokDeco = editor ? editor.deltaDecorations(tokDeco, []) : [];
+  if (focus) document.querySelector(`.tabs button[data-tab="${tab}"]`).scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+// ---- toast ----------------------------------------------------------------------
+let toastTimer = null;
+function toast(msg) {
+  const t = $("toast");
+  t.innerHTML = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), 3800);
+}
+
+// ---- compiler pipeline strip ------------------------------------------------------
+function renderPipeline() {
+  const ds = last.diagnostics, empty = !model.getValue().trim();
+  const lexN = ds.filter((d) => d.phase === "lexer").length;
+  const parN = ds.filter((d) => d.phase === "parser").length;
+  const semN = ds.filter((d) => d.phase === "semantic").length;
+  const toks = (last.lex_tokens || []).length;
+  const st = (n) => empty ? "skip" : n ? "bad" : "ok";
+  const plural = (n, w) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  const stages = [
+    { tab: "tokens", cls: st(lexN), name: "Lexer", info: empty ? "waiting for code" : lexN ? plural(lexN, "error") : `${toks} tokens` },
+    { tab: lexN || parN ? "errors" : "trace", cls: st(parN), name: "LL(1) parser", info: empty ? "–" : parN ? `${plural(parN, "error")}, repaired` : "parse tree built" },
+    { tab: "errors", cls: empty || lexN || parN ? "skip" : semN ? "bad" : "ok", name: "Semantic checks",
+      info: empty ? "–" : lexN || parN ? "waits for a clean parse" : semN ? plural(semN, "error") : "all ok" },
+  ];
+  $("pipeline").innerHTML = stages.map((s, i) => `${i ? `<span class="arrow" aria-hidden="true">→</span>` : ""}
+    <button class="stage ${s.cls}" data-go="${s.tab}" title="Open ${s.tab}">
+      <span class="ic">${s.cls === "ok" ? "✓" : s.cls === "bad" ? "!" : i + 1}</span>
+      <span style="min-width:0"><b>${s.name}</b><small>${esc(s.info)}</small></span></button>`).join("");
+}
+$("pipeline").addEventListener("click", (ev) => { const b = ev.target.closest(".stage"); if (b) showTab(b.dataset.go, true); });
+
+// ---- tokens ---------------------------------------------------------------------
+function tokClass(k) {
+  if (k === "ID") return "id";
+  if (k === "INT") return "num";
+  if (k === "STRING") return "str";
+  return /^[A-Za-z]/.test(k) ? "kw" : "op";
+}
+const TOK_NAMES = { kw: "keywords", id: "identifiers", num: "numbers", str: "strings", op: "operators & punctuation" };
+function renderTokens() {
+  if (!last) return;
+  const toks = last.lex_tokens || [];
+  if (!toks.length) { $("panel-tokens").innerHTML = `<div class="empty"><strong>No tokens yet.</strong>The lexer's output appears here as you type.</div>`; return; }
+  const counts = {};
+  toks.forEach((t) => { const c = tokClass(t.kind); counts[c] = (counts[c] || 0) + 1; });
+  const byLine = new Map();
+  toks.forEach((t, i) => { if (!byLine.has(t.line)) byLine.set(t.line, []); byLine.get(t.line).push(i); });
+  const lexErr = last.diagnostics.filter((d) => d.phase === "lexer").length;
+  $("panel-tokens").innerHTML = `
+    <p class="note-box">The lexer turned your code into <b>${toks.length} tokens</b>${lexErr ? `, recovering from ${lexErr} lexical error${lexErr > 1 ? "s" : ""}` : ""}. Spaces and comments are dropped. Click a token, or a group above, to highlight every token of that kind in your code.</p>
+    <div class="tok-summary">${Object.entries(counts).map(([c, n]) => `<button data-cat="${c}" aria-pressed="${tokHl === c}" title="Highlight all ${TOK_NAMES[c]} in the code"><span class="tk ${c}" style="padding:0 .25rem">a</span>${n} ${TOK_NAMES[c]}</button>`).join("")}
+      ${tokHl ? `<button class="clear-hl" data-cat="">✕ Clear highlight</button>` : ""}</div>
+    ${[...byLine.entries()].map(([ln, ids]) => `<div class="tok-line"><span class="ln">${ln}</span>${ids.map((i) => {
+      const t = toks[i];
+      const c = tokClass(t.kind);
+      return `<span class="tk ${c}${tokHl === c ? " hl" : ""}${tokPick === i ? " picked" : ""}" data-i="${i}" title="${esc(t.kind === t.lexeme ? "keyword / symbol" : t.kind)} · line ${t.line}, col ${t.col}">${esc(t.lexeme)}</span>`;
+    }).join("")}</div>`).join("")}`;
+  $("panel-tokens").classList.toggle("hl-on", !!tokHl);
+  paintTokenHighlight();
+}
+// Highlight every token of one kind (keywords, identifiers, ...) in the editor.
+let tokHl = null, tokPick = null, tokDeco = [];
+function paintTokenHighlight() {
+  if (!editor || !last) return;
+  const toks = last.lex_tokens || [];
+  const show = tokHl && !$("panel-tokens").hidden;
+  const picked = tokPick != null && toks[tokPick] ? toks[tokPick] : null;
+  const decos = !show ? [] : toks.filter((t) => tokClass(t.kind) === tokHl).map((t) => ({
+    range: rangeOf(t.start, t.end),
+    options: { inlineClassName: `ed-${tokHl}` + (picked && t.lexeme === picked.lexeme ? " ed-same" : ""),
+      overviewRuler: { color: "#2f6fd680", position: 4 } },
+  }));
+  tokDeco = editor.deltaDecorations(tokDeco, decos);
+}
+function setTokenHighlight(cat, pick) {
+  tokHl = cat || null;
+  tokPick = cat ? pick : null;
+  renderTokens();
+}
+$("panel-tokens").addEventListener("click", (ev) => {
+  if (!last) return;
+  const chip = ev.target.closest(".tok-summary button");
+  if (chip) { setTokenHighlight(chip.dataset.cat && chip.dataset.cat !== tokHl ? chip.dataset.cat : null, null); return; }
+  const el = ev.target.closest(".tk[data-i]");
+  if (!el) return;
+  const i = +el.dataset.i, t = last.lex_tokens[i], c = tokClass(t.kind);
+  if (tokHl === c && tokPick === i) { setTokenHighlight(null); return; }
+  setTokenHighlight(c, i);
+  const r = rangeOf(t.start, t.end);
+  editor.revealRangeInCenter(r);
+});
+
+// ---- LL(1) trace player -------------------------------------------------------------
+let traceData = null, traceKey = "", traceStep = 0, traceTimer = null, traceDeco = [], traceLoading = null;
+const SPEEDS = { slow: 700, normal: 260, fast: 60 };
+let traceSpeed = "normal";
+
+async function loadTrace() {
+  const source = model.getValue(), key = lang + "\u0000" + source;
+  if (key === traceKey && traceData) return;
+  if (!source.trim()) { traceData = null; traceKey = key; renderTrace(); return; }
+  stopTrace();
+  traceKey = key;
+  $("panel-trace").innerHTML = `<p class="note-box">Running the LL(1) parser step by step…</p>`;
+  const job = (traceLoading = (async () => (await getEngine()).trace(source, lang))());
+  try {
+    const data = await job;
+    if (job !== traceLoading) return;
+    traceData = data;
+    traceStep = 0;
+    renderTrace();
+  } catch (e) { console.error(e); $("panel-trace").innerHTML = `<p class="note-box">The trace could not be computed.</p>`; }
+}
+function stopTrace() { clearInterval(traceTimer); traceTimer = null; const b = $("tr-play"); if (b) b.textContent = "▶ Play"; }
+function playTrace() {
+  if (traceTimer) { stopTrace(); return; }
+  if (traceStep >= traceData.steps.length - 1) traceStep = 0;
+  $("tr-play").textContent = "❚❚ Pause";
+  traceTimer = setInterval(() => {
+    if (traceStep >= traceData.steps.length - 1) { stopTrace(); return; }
+    setStep(traceStep + 1);
+  }, SPEEDS[traceSpeed]);
+}
+function symHtml(s, cls) {
+  const term = traceData && traceGrammarTerminal(s);
+  return `<span class="sym ${term ? "t" : ""} ${cls || ""}">${esc(s === "EOF" ? "$" : s)}</span>`;
+}
+function traceGrammarTerminal(s) {
+  return traceData.terminalSet.has(s);
+}
+function actionText(st) {
+  const tk = traceData.tokens[st.pos];
+  const look = tk ? (tk.synthetic ? `${tk.kind} (inserted)` : tk.lexeme || tk.kind) : "";
+  if (st.action === "expand")
+    return `<span class="kind expand">expand</span>${esc(st.sym)} → ${st.prod.length ? st.prod.map(esc).join(" ") : "ε"}
+      <div class="note-box" style="margin:.3rem 0 0;font-weight:400">Table entry M[${esc(st.sym)}, ${esc(st.la)}] chose this rule because the next token is <code>${esc(look)}</code>.
+      <button class="show-cell" data-nt="${esc(st.sym)}" data-t="${esc(st.la)}">Show it in the parse table</button></div>`;
+  if (st.action === "match") return `<span class="kind match">match</span>${esc(look || st.sym)}  <span class="note-box" style="font-weight:400">top of stack equals the next token, so both are consumed</span>`;
+  if (st.action === "accept") return `<span class="kind accept">accept</span>The stack is empty and all input is consumed: the program is syntactically valid.`;
+  return `<span class="kind error">error</span>No rule for ${esc(st.sym)} on ${esc(st.la)}`;
+}
+function renderTrace() {
+  const P = $("panel-trace");
+  if (!traceData || !traceData.ok) {
+    P.innerHTML = `<div class="empty"><strong>Nothing to trace yet.</strong>Write or load a program to watch the table-driven LL(1) parser work step by step.</div>`;
+    return;
+  }
+  traceData.terminalSet = new Set(traceData.terminals || []);
+  const n = traceData.steps.length;
+  P.innerHTML = `
+    ${traceData.repaired ? `<p class="note-box">Your program has syntax errors, so this traces the <b>repaired</b> program. Tokens inserted by a fix are dashed.</p>` : ""}
+    <p class="note-box">The predictive parser keeps a stack of grammar symbols. Each step either <b>expands</b> the nonterminal on top using the LL(1) table, or <b>matches</b> a terminal against the next input token.</p>
+    <div class="player">
+      <button class="btn" id="tr-first" aria-label="First step">⏮</button>
+      <button class="btn" id="tr-prev" aria-label="Previous step">◀</button>
+      <button class="btn primary" id="tr-play">▶ Play</button>
+      <button class="btn" id="tr-next" aria-label="Next step">▶|</button>
+      <button class="btn" id="tr-last" aria-label="Last step">⏭</button>
+      <select id="tr-speed" aria-label="Speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select>
+      <input type="range" id="tr-range" min="0" max="${n - 1}" value="0" aria-label="Step">
+      <span class="count" id="tr-count"></span>
+    </div>
+    <div class="step-card">
+      <div class="step-action" id="tr-action"></div>
+      <div class="lane-label">Stack (top on the right)</div><div class="lane" id="tr-stack"></div>
+      <div class="lane-label">Input</div><div class="lane" id="tr-input"></div>
+    </div>
+    <div class="trace-wrap" id="tr-wrap"><table class="trace-table"><thead><tr><th>#</th><th>Stack</th><th>Next</th><th>Action</th></tr></thead>
+      <tbody>${traceData.steps.map((st, i) => {
+        const tk = traceData.tokens[st.pos];
+        const act = st.action === "expand" ? `${st.sym} → ${st.prod.length ? st.prod.join(" ") : "ε"}` : st.action === "match" ? `match ${st.sym}` : st.action;
+        return `<tr data-i="${i}"><td>${i + 1}</td><td class="st">${st.stack.length > 4 ? "… " : ""}${esc(st.stack.slice(-4).map((x) => x === "EOF" ? "$" : x).join(" "))}</td><td>${esc(tk ? tk.lexeme || tk.kind : "")}</td><td>${esc(act)}</td></tr>`;
+      }).join("")}</tbody></table></div>
+    ${traceData.truncated ? `<p class="note-box">Only the first ${n} steps are shown.</p>` : ""}`;
+  $("tr-speed").value = traceSpeed;
+  $("tr-first").onclick = () => { stopTrace(); setStep(0); };
+  $("tr-prev").onclick = () => { stopTrace(); setStep(Math.max(traceStep - 1, 0)); };
+  $("tr-next").onclick = () => { stopTrace(); setStep(Math.min(traceStep + 1, n - 1)); };
+  $("tr-last").onclick = () => { stopTrace(); setStep(n - 1); };
+  $("tr-play").onclick = playTrace;
+  $("tr-speed").onchange = (e) => { traceSpeed = e.target.value; if (traceTimer) { stopTrace(); playTrace(); } };
+  $("tr-range").oninput = (e) => { stopTrace(); setStep(+e.target.value); };
+  $("tr-wrap").onclick = (e) => { const tr = e.target.closest("tr[data-i]"); if (tr) { stopTrace(); setStep(+tr.dataset.i); } };
+  setStep(Math.min(traceStep, n - 1));
+}
+function setStep(i) {
+  traceStep = i;
+  const st = traceData.steps[i], n = traceData.steps.length;
+  $("tr-count").textContent = `step ${i + 1} / ${n}`;
+  $("tr-range").value = i;
+  $("tr-action").innerHTML = actionText(st);
+  const stack = st.stack, MAX = 12;
+  const shown = stack.slice(-MAX);
+  $("tr-stack").innerHTML = (stack.length > MAX ? `<span class="sym more">… ${stack.length - MAX} more</span>` : "") +
+    (stack.length ? shown.map((s, k) => symHtml(s, k === shown.length - 1 ? "top" : "")).join("") : `<span class="sym more">empty</span>`);
+  $("tr-stack").scrollLeft = $("tr-stack").scrollWidth;
+  const toks = traceData.tokens, a = Math.max(0, st.pos - 3), b = Math.min(toks.length, st.pos + 14);
+  $("tr-input").innerHTML = (a > 0 ? `<span class="sym more">…</span>` : "") + toks.slice(a, b).map((t, k) => {
+    const idx = a + k, label = t.kind === "EOF" ? "$" : t.lexeme || t.kind;
+    return `<span class="sym t ${idx < st.pos ? "done" : idx === st.pos ? "la" : ""} ${t.synthetic ? "ins" : ""}">${esc(label)}</span>`;
+  }).join("") + (b < toks.length ? `<span class="sym more">…</span>` : "");
+  document.querySelectorAll("#tr-wrap tr.cur").forEach((r) => r.classList.remove("cur"));
+  const row = document.querySelector(`#tr-wrap tr[data-i="${i}"]`);
+  if (row) {
+    row.classList.add("cur");
+    const w = $("tr-wrap");
+    if (row.offsetTop < w.scrollTop + 30 || row.offsetTop > w.scrollTop + w.clientHeight - 30) w.scrollTop = row.offsetTop - w.clientHeight / 2;
+  }
+  const tk = toks[st.pos];
+  if (editor && tk && !tk.synthetic && tk.kind !== "EOF" && traceKey === lang + "\u0000" + model.getValue()) {
+    const r = rangeOf(tk.start, tk.end);
+    traceDeco = editor.deltaDecorations(traceDeco, [{ range: r, options: { inlineClassName: "rc-trace" } }]);
+    if (traceTimer) editor.revealRangeInCenterIfOutsideViewport(r);
+  }
+}
+$("panel-trace").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".show-cell");
+  if (b) { stopTrace(); showGrammarCell(b.dataset.nt, b.dataset.t); }
+});
+
+// ---- grammar explorer -----------------------------------------------------------------
+const grammars = {};
+let gView = "table", gHit = null;
+async function loadGrammar() {
+  const l = lang;
+  if (!grammars[l]) {
+    $("panel-grammar").innerHTML = `<p class="note-box">Computing FIRST and FOLLOW sets and the LL(1) table…</p>`;
+    try { grammars[l] = await (await getEngine()).grammar(l); }
+    catch (e) { console.error(e); $("panel-grammar").innerHTML = `<p class="note-box">The grammar could not be loaded.</p>`; return; }
+  }
+  if (l === lang && !$("panel-grammar").hidden) renderGrammar(grammars[l]);
+}
+function sym(s, g) {
+  return g.terminals.includes(s) ? `<span class="tm">${esc(s === "EOF" ? "$" : s)}</span>` : `<span class="nt">${esc(s)}</span>`;
+}
+let gFilter = "";
+function ttHtml(t, g) {
+  const isWord = /^[A-Za-z]/.test(t);
+  const cls = t === "EOF" ? "end" : /^(ID|INT|STRING)$/.test(t) ? "cls" : isWord ? "kw" : "";
+  const label = t === "EOF" ? "$" : t;
+  return `<span class="tt ${cls}" title="${t === "EOF" ? "end of input" : t === "ID" ? "identifier" : t === "INT" ? "integer literal" : t === "STRING" ? "string literal" : isWord ? "keyword" : "symbol"}">${esc(label)}</span>`;
+}
+function tokenList(list, g) {
+  const order = new Map(g.terminals.map((t, i) => [t, i]));
+  return `<div class="ts">${[...list].sort((a, b) => (order.get(a) ?? 999) - (order.get(b) ?? 999)).map((t) => ttHtml(t, g)).join("")}</div>`;
+}
+function renderGrammar(g) {
+  const P = $("panel-grammar");
+  const head = `<div class="g-head"><span><b>${esc(g.language)}</b> grammar</span><span>· ${g.nonterminals.length} nonterminals</span>
+    <span>· ${g.terminals.length} terminals</span><span>· ${g.entries} table entries</span>
+    <span class="ok">${g.conflicts ? `${g.conflicts} conflicts` : "0 conflicts · LL(1) ✓"}</span></div>
+    <div class="tree-tools"><div class="seg" role="group" aria-label="Grammar view" id="g-seg">
+      <button data-g="rules" aria-pressed="${gView === "rules"}">Productions</button>
+      <button data-g="sets" aria-pressed="${gView === "sets"}">FIRST & FOLLOW</button>
+      <button data-g="table" aria-pressed="${gView === "table"}">LL(1) table</button></div>
+      ${gView !== "table" ? `<span class="spacer"></span><input class="g-filter" id="g-filter" type="search" placeholder="Filter rules, e.g. expr" value="${esc(gFilter)}" aria-label="Filter rules">` : ""}</div>`;
+  const q = gFilter.trim().toLowerCase();
+  const nts = g.nonterminals.filter((nt) => !q || nt.toLowerCase().includes(q));
+  const none = `<div class="g-empty">No rule matches “${esc(gFilter)}”.</div>`;
+  let body = "";
+  if (gView === "rules") {
+    const byLhs = {};
+    g.productions.forEach((p, i) => { (byLhs[p.lhs] = byLhs[p.lhs] || []).push([i, p]); });
+    const sym = (x) => g.terminals.includes(x) ? ttHtml(x, g) : `<span class="ntr">${esc(x)}</span>`;
+    body = `<p class="note-box">Each rule lists its alternatives one per line. The small number is the production number used in the LL(1) table. Tokens are shown as boxes; rule names in italics.</p>
+      <div class="g-card">${nts.length ? `<div class="prods">${nts.map((nt) => {
+        const hl = gHit && gHit.nt === nt ? " hl" : "";
+        return `<div class="lhs${hl}">${esc(nt)}</div><div class="alts${hl}">${byLhs[nt].map(([i, p]) =>
+          `<div class="alt"><span class="pn">${i + 1}</span>${p.rhs.length ? p.rhs.map(sym).join("") : `<span class="tt eps">ε</span>`}</div>`).join("")}</div>`;
+      }).join("")}</div>` : none}</div>`;
+  } else if (gView === "sets") {
+    body = `<p class="note-box"><b>FIRST(A)</b>: the tokens that can start A. <b>FOLLOW(A)</b>: the tokens that can come right after A. Both are computed from the grammar by repeating until nothing changes.</p>
+      <div class="ff-legend"><span><span class="tt kw">if</span> keyword</span><span><span class="tt cls">ID</span> token class</span><span><span class="tt">;</span> symbol</span><span><span class="tt end">$</span> end of input</span><span><span class="tt eps">ε</span> can be empty</span></div>
+      <div class="g-card">${nts.length ? `<div class="ffh"><span>Rule</span><span>FIRST</span><span>FOLLOW</span></div>${
+      nts.map((nt) => `<div class="ffr"><div class="nt">${esc(nt)}${g.nullable.includes(nt) ? ` <span class="tt eps" title="can be empty">ε</span>` : ""}</div>
+        <div class="set"><span class="lbl">FIRST</span>${tokenList(g.first[nt], g)}</div>
+        <div class="set"><span class="lbl">FOLLOW</span>${g.follow[nt].length ? tokenList(g.follow[nt], g) : `<span class="none">–</span>`}</div></div>`).join("")}` : none}</div>`;
+  } else {
+    body = `<p class="note-box">Row = nonterminal on top of the stack, column = next token. The number is the production to apply (hover for the rule). Empty cells are syntax errors; that is where ExplainParse starts its repair search.</p>
+      <div class="ptable-wrap" id="ptable-wrap"><table class="ptable"><thead><tr><th>M</th>${g.terminals.map((t) => `<th class="${gHit && gHit.t === t ? "hit-col" : ""}">${esc(t === "EOF" ? "$" : t)}</th>`).join("")}</tr></thead><tbody>${
+      g.nonterminals.map((nt) => `<tr class="${gHit && gHit.nt === nt ? "hit-row" : ""}"><th>${esc(nt)}</th>${g.terminals.map((t) => {
+        const p = g.table[nt][t];
+        if (p === undefined) return "<td></td>";
+        const pr = g.productions[p], hit = gHit && gHit.nt === nt && gHit.t === t;
+        return `<td class="f ${hit ? "hit" : ""}" ${hit ? 'id="g-hit"' : ""} title="${esc(`${p + 1}: ${pr.lhs} → ${pr.rhs.join(" ") || "ε"}`)}">${p + 1}</td>`;
+      }).join("")}</tr>`).join("")}</tbody></table></div>`;
+  }
+  P.innerHTML = head + body;
+  $("g-seg").onclick = (e) => { const b = e.target.closest("button"); if (b) { gView = b.dataset.g; renderGrammar(g); } };
+  const f = $("g-filter");
+  if (f) f.oninput = () => {
+    gFilter = f.value;
+    const pos = f.selectionStart;
+    renderGrammar(g);
+    const nf = $("g-filter"); nf.focus(); nf.setSelectionRange(pos, pos);
+  };
+  const hit = $("g-hit");
+  if (hit) {
+    const w = $("ptable-wrap");
+    w.scrollLeft = hit.offsetLeft - w.clientWidth / 2;
+    w.scrollTop = hit.offsetTop - w.clientHeight / 2;
+  }
+}
+function showGrammarCell(nt, t) {
+  gHit = { nt, t };
+  gView = "table";
+  showTab("grammar", true);
+}
+
+// ---- break it / share / theme ----------------------------------------------------------
+$("breakit").addEventListener("click", async () => {
+  const source = model.getValue();
+  if (!source.trim()) { toast("Load an example first, then break it."); return; }
+  if (last && last.diagnostics.some((d) => d.phase !== "semantic")) { toast("Fix the syntax errors first (try <b>Fix all</b>), then break it again."); return; }
+  const res = await (await getEngine()).breakIt(source, lang, Math.floor(Math.random() * 1e9));
+  if (!res.ok) { toast("Couldn't find a place to break this program."); return; }
+  editor.pushUndoStop();
+  editor.executeEdits("explainparse", [{ range: model.getFullModelRange(), text: res.source }]);
+  editor.pushUndoStop();
+  showTab("errors", false);
+  toast(`🎲 I ${esc(res.label)} near line ${res.line}. Did ExplainParse find it? (<kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo)`);
+});
+
+function b64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = ""; bytes.forEach((b) => { bin += String.fromCharCode(b); });
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+function unb64(s) {
+  const bin = atob(s.replace(/-/g, "+").replace(/_/g, "/"));
+  return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+}
+$("share").addEventListener("click", async () => {
+  const url = `${location.origin}${location.pathname}#code=${b64(JSON.stringify({ l: lang, s: model.getValue() }))}`;
+  try { await navigator.clipboard.writeText(url); toast("Link copied. Anyone who opens it sees this program."); }
+  catch { prompt("Copy this link:", url); }
+});
+function openSharedLink() {
+  const m = location.hash.match(/^#code=([\w-]+)$/);
+  if (!m) return;
+  try {
+    const { l, s } = JSON.parse(unb64(m[1]));
+    if (typeof s !== "string" || !LANGS[l]) return;
+    const existing = sessions.find((x) => x.source === s && x.lang === l);
+    current = existing || newSession(l, s);
+    persist();
+  } catch (e) { console.error(e); }
+  history.replaceState(null, "", location.pathname + location.search);
+}
+function applyTheme(t) {
+  if (t) document.documentElement.dataset.theme = t; else delete document.documentElement.dataset.theme;
+  if (window.monaco && monaco.editor) monaco.editor.setTheme(isDark() ? "ep-dark" : "ep-light");
+  $("theme-label").textContent = isDark() ? "Light theme" : "Dark theme";
+}
+// ---- ⋯ More menu: click to open, closes on choice, outside click or Escape; arrow keys move
+(function () {
+  const btn = $("more-btn"), menu = $("more-menu");
+  const items = () => [...menu.querySelectorAll("[role=menuitem]")];
+  const open = (focusFirst) => {
+    menu.hidden = false; btn.setAttribute("aria-expanded", "true");
+    if (focusFirst) items()[0].focus();
+  };
+  const close = (refocus) => {
+    if (menu.hidden) return;
+    menu.hidden = true; btn.setAttribute("aria-expanded", "false");
+    if (refocus) btn.focus();
+  };
+  btn.addEventListener("click", () => (menu.hidden ? open(false) : close(false)));
+  btn.addEventListener("keydown", (e) => { if (e.key === "ArrowDown") { e.preventDefault(); open(true); } });
+  menu.addEventListener("click", (e) => { if (e.target.closest("[role=menuitem]")) close(false); });
+  menu.addEventListener("keydown", (e) => {
+    const list = items(), i = list.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); list[(i + 1) % list.length].focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus(); }
+    else if (e.key === "Escape" || e.key === "Tab") close(e.key === "Escape");
   });
+  document.addEventListener("pointerdown", (e) => { if (!e.target.closest(".more")) close(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(true); });
+})();
+try { applyTheme(localStorage.getItem("explainparse.theme")); } catch {}
+$("theme").addEventListener("click", () => {
+  const next = isDark() ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem("explainparse.theme", next); } catch {}
+});
+
+// ---- start-up ----------------------------------------------------------------
+loadSessions();
+openSharedLink();
+if (!current) newSession("lumen");
+setLang(current.lang, false);
+renderSessions();
+getEngine().then((eng) => eng.meta()).then((m) => {
+  examplesList = (m && m.examples) || [];
+  fillExamples();
 }).catch(() => {});
 </script>
 </body>

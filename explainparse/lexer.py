@@ -1,10 +1,14 @@
-"""Hand-written lexer for Lumen with explainable, recoverable lexical errors."""
+"""Hand-written lexer (Lumen, Mini-C, Mini-Java) with explainable, recoverable lexical errors."""
 from typing import List, Tuple
-from .tokens import Token, KEYWORDS, TWO_CHAR_OPS, ONE_CHAR_OPS
+from .tokens import Token
 from .diagnostics import Diagnostic, Label, Fix
+from .languages import get_language
 
 
-def lex(src: str) -> Tuple[List[Token], List[Diagnostic]]:
+def lex(src: str, lang="lumen") -> Tuple[List[Token], List[Diagnostic]]:
+    lang = get_language(lang)
+    KEYWORDS, TWO_CHAR_OPS, ONE_CHAR_OPS = lang.keywords, lang.two_char_ops, lang.one_char_ops
+    NAME = lang.name
     toks: List[Token] = []
     diags: List[Diagnostic] = []
     i, n = 0, len(src)
@@ -93,7 +97,7 @@ def lex(src: str) -> Tuple[List[Token], List[Diagnostic]]:
                 end = j + 1 if closed else j
                 diags.append(Diagnostic(
                     "E104", "strings use double quotes", line, col(i),
-                    "Lumen strings are written with double quotes (\"...\"). Single quotes are not "
+                    f"{NAME} strings are written with double quotes (\"...\"). Single quotes are not "
                     "valid string delimiters.",
                     [Label(line, col(i), end - i, "single-quoted string")],
                     Fix("replace the single quotes with double quotes",
@@ -146,7 +150,7 @@ def lex(src: str) -> Tuple[List[Token], List[Diagnostic]]:
             word = "and" if c == "&" else "or"
             diags.append(Diagnostic(
                 "E100", f"unknown operator '{c}'", line, col(i),
-                f"Lumen has no single '{c}' operator. Logical {word} is written '{op}'.",
+                f"{NAME} has no single '{c}' operator. Logical {word} is written '{op}'.",
                 [Label(line, col(i), 1, f"did you mean '{op}'?")],
                 Fix(f"replace '{c}' with '{op}'", [(i, i + 1, op)]), confidence="medium", phase="lexer"))
             toks.append(Token(op, c, line, col(i), i, i + 1))   # recover as the intended operator
@@ -154,7 +158,7 @@ def lex(src: str) -> Tuple[List[Token], List[Diagnostic]]:
             continue
         diags.append(Diagnostic(
             "E100", f"invalid character {c!r}", line, col(i),
-            f"The character {c!r} is not part of the Lumen language and cannot start any token.",
+            f"The character {c!r} is not part of the {NAME} language and cannot start any token.",
             [Label(line, col(i), 1, "not allowed here")],
             Fix("remove it", [(i - 1, i + 1, "") if i > 0 and src[i - 1] == " " and
                               src[i + 1:i + 2] in (";", ")", ",", "") else (i, i + 1, "")]),

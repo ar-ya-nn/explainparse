@@ -1,0 +1,15 @@
+fn add(a: int, b: int) -> int {
+    return a + b;
+}
+
+fn main() -> int {
+    let total: int = 0;
+    let ok: bool = total;
+    if (totl > 1) {
+        total = add(1);
+    }
+    while (total) {
+        total = total - "one";
+    }
+    return ok;
+}

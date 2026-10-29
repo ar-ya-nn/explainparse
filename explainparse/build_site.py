@@ -7,10 +7,10 @@ import glob
 import json
 import os
 import shutil
-from .server import examples, ROOT
+from .server import meta, ROOT
 
-MODULES = ["__init__.py", "tokens.py", "diagnostics.py", "lexer.py", "grammar.py",
-           "parser.py", "explain.py", "engine.py"]
+MODULES = ["__init__.py", "tokens.py", "diagnostics.py", "languages.py", "lexer.py", "grammar.py",
+           "parser.py", "explain.py", "semantic.py", "engine.py", "evaluate.py", "extras.py"]
 
 
 def build(out="site"):
@@ -19,7 +19,7 @@ def build(out="site"):
     pkg = os.path.join(ROOT, "explainparse")
     files = {m: open(os.path.join(pkg, m), encoding="utf-8").read() for m in MODULES}
     with open(os.path.join(out, "bundle.json"), "w", encoding="utf-8") as f:
-        json.dump({"files": files, "examples": examples()}, f)
+        json.dump({"files": files, "meta": meta()}, f)
     shutil.copy(os.path.join(ROOT, "web", "index.html"), os.path.join(out, "index.html"))
     open(os.path.join(out, ".nojekyll"), "w").close()
     return out

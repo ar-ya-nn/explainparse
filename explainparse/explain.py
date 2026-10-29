@@ -45,6 +45,7 @@ class Context:
     chain: List           # nodes from innermost to root
     tokmap: dict
     work: List[Token]
+    lang: object = None
 
 
 def build_context(parser, work, e, expected):
@@ -56,13 +57,21 @@ def build_context(parser, work, e, expected):
             chain.append(node)
             node = node.parent
     prev = work[e - 1] if e > 0 else None
-    return Context(e, work[e], prev, expected, chain, tokmap, work)
+    return Context(e, work[e], prev, expected, chain, tokmap, work, getattr(parser, "lang", None))
+
+
+def _lname(ctx):
+    return ctx.lang.name if ctx.lang is not None else "Lumen"
 
 
 # ------------------------------------------------------------------ naming helpers
-def _child_lexeme(node, idx):
-    if node is not None and len(node.children) > idx and node.children[idx].token is not None:
-        return node.children[idx].token.lexeme
+def _child_lexeme(node, idx=None):
+    """The name declared by a node: its first identifier child (e.g. the function name)."""
+    if node is None:
+        return None
+    for ch in node.children:
+        if ch.token is not None and ch.token.kind == "ID":
+            return ch.token.lexeme
     return None
 
 
@@ -105,6 +114,8 @@ def paren_purpose(idx, ctx):
         return f"the arguments of the call to '{ctx.work[idx - 1].lexeme}'"
     if par == "func_decl":
         return f"the parameter list of function '{_child_lexeme(node.parent, 1)}'"
+    if par == "call_tail" and ctx.work[idx - 1].kind == "ID":
+        return f"the arguments of the call to '{ctx.work[idx - 1].lexeme}'"
     return "a parenthesised expression"
 
 
@@ -115,6 +126,8 @@ def brace_purpose(idx, ctx):
     sym = owner.symbol if owner else None
     if sym == "func_decl":
         return f"body of function '{_child_lexeme(owner, 1)}'"
+    if block is not None and block.symbol == "program":
+        return f"body of class '{_child_lexeme(block)}'"
     return {"if_stmt": "if block", "while_stmt": "while loop body",
             "else_body": "else block"}.get(sym, "block")
 
@@ -129,8 +142,9 @@ def expected_text(expected):
     if len(exp & OP_GROUP) >= 4:
         parts.append("an operator")
         exp -= OP_GROUP
-    if TYPE_GROUP <= exp:
-        parts.append("a type (int, bool or str)")
+    types = sorted(exp & TYPE_GROUP)
+    if len(types) >= 2:
+        parts.append("a type (" + ", ".join(types[:-1]) + " or " + types[-1] + ")")
         exp -= TYPE_GROUP
     parts += [describe_terminal(t) for t in sorted(exp)][:4]
     if not parts:
@@ -139,11 +153,20 @@ def expected_text(expected):
 
 
 def rule_for(ctx, t):
+    overrides = ctx.lang.rules if ctx.lang is not None else {}
     for n in ctx.chain:
-        r = RULES.get((n.symbol, t))
+        r = overrides.get((n.symbol, t))
+        if r is None and (ctx.lang is None or ctx.lang.id == "lumen" or
+                          (n.symbol, t) not in _LUMEN_ONLY):
+            r = RULES.get((n.symbol, t))
         if r:
-            return r
+            return r.replace("Lumen", _lname(ctx))
     return None
+
+
+# rules whose wording shows Lumen syntax; other languages use their own overrides
+_LUMEN_ONLY = {("func_decl", "("), ("func_decl", "->"), ("func_decl", "ID"), ("var_decl", ":"),
+               ("var_decl", "="), ("var_decl", "ID"), ("param", ":")}
 
 
 # ------------------------------------------------------------------ main
@@ -169,7 +192,7 @@ def explain(c, ctx, confidence, source, layout, edit, synth, cands) -> Diagnosti
             what = construct_label(node) if node else "statement"
             snip = snippet(node, ctx, source) if node else None
             code, title = "E201", f"missing ';' at the end of the {what}"
-            why = (f"Every statement in Lumen ends with ';'. "
+            why = (f"Every statement in {_lname(ctx)} ends with ';'. "
                    + (f"`{snip}` is a complete {CONSTRUCTS.get(node.symbol, 'statement')}, but "
                       if snip else "The statement here looked complete, but ")
                    + f"instead of ';' the parser found {describe_token(found)}"
@@ -231,7 +254,8 @@ def explain(c, ctx, confidence, source, layout, edit, synth, cands) -> Diagnosti
         elif grp == "type":
             code, title = "E206", "missing type"
             why = (f"A type is required after {describe_token(prev) if prev else 'this point'}. "
-                   f"Lumen's types are int, bool and str, but the parser found "
+                   f"{_lname(ctx)}'s types are "
+                   f"{ctx.lang.types_text if ctx.lang else 'int, bool and str'}, but the parser found "
                    f"{describe_token(nxt)}.")
             labels.append(Label(a_line, a_col, 1, "expected a type here"))
             fixd = f"insert a type such as 'int' on line {a_line}"
@@ -248,7 +272,7 @@ def explain(c, ctx, confidence, source, layout, edit, synth, cands) -> Diagnosti
         elif grp == "operator":
             code, title = "E207", "missing operator between two values"
             why = (f"{describe_token(prev).capitalize()} and {describe_token(nxt)} sit next to each "
-                   f"other with nothing combining them. Lumen needs an operator such as +, -, *, "
+                   f"other with nothing combining them. {_lname(ctx)} needs an operator such as +, -, *, "
                    f"== or && between two values.")
             labels.append(Label(a_line, a_col, 1, "expected an operator here"))
             fixd = f"insert an operator (e.g. '+') on line {a_line}"
